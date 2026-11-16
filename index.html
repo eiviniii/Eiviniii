@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Vida OS</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="bg-fx" aria-hidden="true"><i></i><i></i><i></i></div>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">V</div>
+      <div><b>Vida OS</b><small id="brand-sub">seu sistema pessoal</small></div>
+    </div>
+    <nav id="nav" class="nav"></nav>
+    <div class="side-foot">
+      <button class="btn ghost sm" id="privacy-btn" title="Ocultar valores (modo privacidade)">👁️ Privacidade</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="search">
+        <span>🔎</span>
+        <input id="gsearch" placeholder="Buscar gastos, eventos, materiais, exercícios…  (Ctrl+K)" autocomplete="off">
+        <div id="gresults" class="gresults"></div>
+      </div>
+      <button class="btn primary" id="quick-btn">＋ Rápido</button>
+    </header>
+    <div id="view" class="view"></div>
+  </main>
+
+  <nav id="bottomnav" class="bottomnav"></nav>
+  <div id="modal-root"></div>
+  <div id="toasts" class="toasts"></div>
+
+  <!-- bibliotecas (locais, funcionam offline) -->
+  <script src="vendor/chart.umd.js"></script>
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="vendor/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      // em file:// o worker não carrega; então usamos o worker no mesmo thread
+      if (location.protocol === 'file:') document.write('<script src="vendor/pdf.worker.min.js"><\/script>');
+      else pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+    }
+  </script>
+  <!-- aplicativo -->
+  <script src="js/core.js"></script>
+  <script src="js/parsers.js"></script>
+  <script src="js/body.js"></script>
+  <script src="js/views/dashboard.js"></script>
+  <script src="js/views/finance.js"></script>
+  <script src="js/views/invest.js"></script>
+  <script src="js/views/study.js"></script>
+  <script src="js/views/fitness.js"></script>
+  <script src="js/views/agenda.js"></script>
+  <script src="js/views/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
