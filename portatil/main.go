@@ -33,7 +33,7 @@ import (
 	"time"
 )
 
-const version = "1.1.0"
+const version = "1.2.0"
 
 // Cópia interna do aplicativo: se algum arquivo sumir do pendrive
 // (antivírus, extração incompleta…), o programa serve a cópia daqui.
@@ -52,6 +52,9 @@ var (
 	pingMu                                         sync.Mutex
 	quitCh                                         = make(chan string, 4)
 	lastBackup                                     time.Time
+	useEmbedded                                    bool   // arquivos da pasta são de outra versão → usa a cópia interna
+	filesInfo                                      string // para mostrar em Ajustes
+	verRe                                          = regexp.MustCompile(`App\.VERSION = '([^']+)'`)
 )
 
 func main() {
@@ -114,6 +117,27 @@ func main() {
 	addr := ln.Addr().(*net.TCPAddr)
 	url := fmt.Sprintf("http://127.0.0.1:%d/index.html?t=%s", addr.Port, token)
 	_ = os.WriteFile(filepath.Join(dataDir, ".sessao"), []byte(url), 0o600)
+
+	// Os arquivos da pasta são da mesma versão deste programa? Se não (pasta antiga,
+	// extração em outro lugar, arquivo faltando), usa a cópia interna — sempre a certa.
+	embVer, diskVer := "", ""
+	if b, err := embedded.ReadFile("app/js/core.js"); err == nil {
+		if m := verRe.FindSubmatch(b); m != nil {
+			embVer = string(m[1])
+		}
+	}
+	if b, err := os.ReadFile(filepath.Join(appDir, "js", "core.js")); err == nil {
+		if m := verRe.FindSubmatch(b); m != nil {
+			diskVer = string(m[1])
+		}
+	}
+	useEmbedded = embVer != "" && diskVer != embVer
+	if useEmbedded {
+		filesInfo = "cópia interna " + embVer + " (pasta tinha " + map[bool]string{true: "nenhuma", false: diskVer}[diskVer == ""] + ")"
+	} else {
+		filesInfo = "pasta " + diskVer
+	}
+	log.Printf("arquivos: %s", filesInfo)
 
 	srv := &http.Server{Handler: guard(addr.Port, routes()), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
@@ -205,7 +229,7 @@ func guard(port int, next http.Handler) http.Handler {
 func routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/info", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, map[string]any{"mode": "pendrive", "version": version, "dir": dataDir, "os": runtime.GOOS})
+		writeJSON(w, map[string]any{"mode": "pendrive", "version": version, "dir": dataDir, "os": runtime.GOOS, "files": filesInfo})
 	})
 	mux.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) { touch(); w.WriteHeader(204) })
 	mux.HandleFunc("/api/bye", func(w http.ResponseWriter, r *http.Request) { quitCh <- "bye"; w.WriteHeader(204) })
@@ -252,7 +276,7 @@ func routes() http.Handler {
 		if p == "/" || p == "/index.html" {
 			// ServeContent não redireciona (o FileServer mandaria /index.html → / em loop)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			if f, err := os.Open(filepath.Join(appDir, "index.html")); err == nil {
+			if f, err := os.Open(filepath.Join(appDir, "index.html")); err == nil && !useEmbedded {
 				defer f.Close()
 				st, _ := f.Stat()
 				http.ServeContent(w, r, "index.html", st.ModTime(), f)
@@ -267,12 +291,14 @@ func routes() http.Handler {
 			return
 		}
 		rel := filepath.FromSlash(strings.TrimPrefix(filepath.ToSlash(filepath.Clean("/"+r.URL.Path)), "/"))
-		if st, err := os.Stat(filepath.Join(appDir, rel)); err == nil && !st.IsDir() && st.Size() > 0 {
+		if st, err := os.Stat(filepath.Join(appDir, rel)); err == nil && !st.IsDir() && st.Size() > 0 && !useEmbedded {
 			diskFS.ServeHTTP(w, r)
 			return
 		}
 		if _, err := fs.Stat(sub, filepath.ToSlash(rel)); err == nil {
-			log.Printf("arquivo ausente no pendrive, usando cópia interna: %s", r.URL.Path)
+			if !useEmbedded {
+				log.Printf("arquivo ausente no pendrive, usando cópia interna: %s", r.URL.Path)
+			}
 			embFS.ServeHTTP(w, r)
 			return
 		}

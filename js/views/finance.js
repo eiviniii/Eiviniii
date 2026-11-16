@@ -399,7 +399,13 @@
           }
           all.push(x);
         }
-        if (!r.items.length) App.toast(`Não encontrei lançamentos em “${f.name}”.`, 'error');
+        if (!r.items.length) {
+          let txt = ''; try { if (App.parse.kind(f) === 'pdf') txt = await App.parse.pdfText(f); } catch (x) { /* */ }
+          App.modal({ title: `Não reconheci os lançamentos de “${U.esc(f.name)}”`, hideFooter: !txt, submitLabel: '📋 Copiar texto lido',
+            body: `<p>O arquivo foi aberto, mas o formato desta fatura/extrato ainda não é reconhecido.</p>
+              ${txt ? `<p class="muted">Copie o texto abaixo e mande para o Claude — com ele dá para ensinar o sistema a ler este banco. <small>(Vida OS ${App.VERSION})</small></p><textarea readonly rows="12" style="font-family:monospace;font-size:.75rem">${U.esc(txt.slice(0, 20000))}</textarea>` : '<p class="muted">Tente exportar em CSV ou OFX pelo app do banco.</p>'}`,
+            onSubmit: async (d, form) => { try { await navigator.clipboard.writeText(txt); App.toast('Texto copiado'); } catch (x) { form.querySelector('textarea').select(); document.execCommand('copy'); } } });
+        }
       } catch (e) { console.error(e); App.toast(`Erro ao ler ${f.name}: ${e.message}`, 'error'); }
     }
     if (btn) { btn.disabled = false; btn.textContent = 'Ler arquivos'; }

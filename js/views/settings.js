@@ -94,6 +94,7 @@
       <div class="row"><button class="btn primary" data-act="export" data-files="0">⬇ Backup (dados)</button><button class="btn" data-act="export" data-files="1">⬇ Backup completo (com PDFs)</button></div>
       <label class="btn btn-file mt">⬆ Restaurar backup<input type="file" accept=".json" data-change="import"></label>
       <p class="muted mt" id="storage-info"><small>${st().transactions.length} lançamentos · ${st().materials.length} PDFs · ${(st().sites || []).length} sites</small></p>
+      <p class="muted"><small>Versão do Vida OS: <b>${App.VERSION}</b>${App.storage.info && App.storage.info.version ? ` · programa portátil ${App.storage.info.version}${App.storage.info.files ? ' · arquivos: ' + App.storage.info.files : ''}` : ''}</small></p>
       <p class="muted"><small>Último backup manual: ${ss().lastBackup ? U.dateBR(ss().lastBackup) : 'nunca'}</small></p></div>
     <div class="card"><header><h3>🧹 Zona de perigo</h3></header>
       <button class="btn danger" data-act="wipe" data-what="transactions">Apagar todos os lançamentos</button>
