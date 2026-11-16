@@ -240,9 +240,10 @@
   views.importar = () => `
     <div class="grid g2">
       <div class="card"><header><h3>⬆ Subir relatório do mês</h3></header>
-        <div class="note">Aceita <b>CSV</b> (Nubank, Inter, C6…), <b>OFX</b> (extrato bancário), <b>Excel</b> e <b>PDF</b> de fatura. O sistema lê, <b>categoriza automaticamente</b>, detecta <b>compras parceladas</b> (ex.: “Parcela 3/10”) e ignora duplicados.</div>
+        <div class="note">Aceita <b>CSV</b> (Nubank, Inter, C6…), <b>OFX</b> (extrato bancário), <b>Excel</b> e <b>PDF</b> de fatura. É só subir: o sistema <b>descobre sozinho de qual fatura é</b> (vencimento/fechamento no próprio PDF), coloca <b>cada compra no mês em que foi feita</b>, <b>categoriza automaticamente</b>, detecta <b>compras parceladas</b> (ex.: “Parcela 3/10”) e ignora duplicados.</div>
         <form data-submit="import">
-          ${F.row(F.month('Mês de referência (fatura)', 'ym', U.ym()), F.text('Conta / cartão', 'account', '', 'placeholder="Ex.: Nubank cartão" list="acc-list"'))}
+          ${F.row(F.text('Conta / cartão', 'account', '', 'placeholder="Ex.: XP cartão" list="acc-list"'))}
+          <details style="margin-bottom:12px"><summary class="muted"><small>Avançado: forçar o mês da fatura (normalmente é detectado sozinho)</small></summary><div class="frow mt">${F.month('Mês da fatura (vazio = automático)', 'ym', '')}</div></details>
           <datalist id="acc-list">${[...accounts(), ...st().cards.map((c) => c.name)].map((a) => `<option value="${U.esc(a)}">`).join('')}</datalist>
           ${(st().accounts || []).length ? F.row(F.select('Descontar do saldo da conta', 'accountId', [['', 'Não — é fatura de cartão'], ...st().accounts.map((a) => [a.id, a.name + ' (extrato)'])], '')) : ''}
           ${st().cards.length ? F.row(F.select('Vincular parcelas ao cartão', 'cardId', [['', '— nenhum —'], ...st().cards.map((c) => [c.id, c.name])], '')) : ''}
@@ -375,17 +376,35 @@
     const d = App.formData(form);
     const files = [...(d.files || [])];
     if (!files.length) return App.toast('Escolha pelo menos um arquivo.', 'error');
-    const year = +d.ym.slice(0, 4);
-    const all = [];
+    const btn = form.querySelector('button.primary'); if (btn) { btn.disabled = true; btn.textContent = 'Lendo…'; }
+    const all = [], infos = [];
     for (const f of files) {
       try {
-        const r = await App.parse.transactions(f, { year });
-        r.items.forEach((it) => all.push({ ...it, file: f, pos: r.positiveIsExpense }));
+        const r = await App.parse.transactions(f, d.ym ? { year: +d.ym.slice(0, 4) } : {});
+        const info = r.info || {};
+        // mês da fatura: forçado > detectado no arquivo > mês da compra mais recente
+        const last = r.items.map((x) => x.date).sort().pop();
+        const fy = d.ym || info.ym || (last ? last.slice(0, 7) : U.ym());
+        const ref = info.closing || (info.due ? U.addDays(info.due, -7) : last);
+        infos.push({ file: f.name, ...info, fy, auto: !d.ym && !!info.ym, guessed: !d.ym && !info.ym });
+        for (const it of r.items) {
+          const x = { ...it, file: f, pos: r.positiveIsExpense, fy };
+          // parcela 2/10, 3/10…: pertence ao mês da fatura, não ao mês da compra original
+          const inst = App.parse.installmentInfo(it.desc);
+          if (inst && inst.cur > 1 && ref && it.date < U.addDays(ref, -40)) {
+            x.origDate = it.date;
+            const day = Math.min(+it.date.slice(8), +App.Fin.monthRange(ref.slice(0, 7))[1].slice(8));
+            x.date = `${ref.slice(0, 7)}-${String(day).padStart(2, '0')}`;
+            if (x.date > ref) x.date = ref;
+          }
+          all.push(x);
+        }
         if (!r.items.length) App.toast(`Não encontrei lançamentos em “${f.name}”.`, 'error');
       } catch (e) { console.error(e); App.toast(`Erro ao ler ${f.name}: ${e.message}`, 'error'); }
     }
+    if (btn) { btn.disabled = false; btn.textContent = 'Ler arquivos'; }
     if (!all.length) return;
-    previewImport(all, d, files);
+    previewImport(all, { ...d, ym: infos[0].fy, infos }, files);
   }
 
   function previewImport(items, meta, files) {
@@ -399,23 +418,28 @@
     // mesmo dia + mesmo valor que algo já lançado (mesmo com outro nome) → não entra de novo
     App.Money.findDuplicates(rows);
     // dentro do próprio arquivo, itens idênticos continuam valendo (compras repetidas reais)
-    const render = () => `<div class="note">Encontrei <b>${rows.length}</b> lançamentos · <b>${rows.filter((r) => r.dup).length}</b> já lançados antes — mesmo dia e mesmo valor (desmarcados, não serão duplicados) · <b>${rows.filter((r) => r.inst).length}</b> parcelados detectados.
+    const monthsHTML = () => {
+      const g = U.groupBy(rows.filter((r) => r.include && r.kind === 'expense'), (r) => r.date.slice(0, 7));
+      return Object.keys(g).sort().map((m) => `<span class="chip info" style="text-transform:capitalize">${U.ymLabel(m)}: ${g[m].length} · ${U.moneyTxt(U.sum(g[m], (r) => r.value))}</span>`).join(' ');
+    };
+    const infoHTML = meta.infos.map((i) => `<div>📄 <b>${U.esc(i.file)}</b> — ${i.guessed ? `<span class="chip warn">não achei o vencimento; usei as datas das compras (${U.ymLabel(i.fy)})</span>` : `fatura de <b style="text-transform:capitalize">${U.ymLabel(i.fy)}</b>${i.due ? ` · vencimento ${U.dateBR(i.due)}` : ''}${i.closing ? ` · fechada em ${U.dateBR(i.closing)}` : ''}${i.auto ? ' <span class="chip ok">detectado automaticamente</span>' : ''}`}</div>`).join('');
+    const render = () => `<div class="note" style="line-height:1.7">${infoHTML}<div class="mt">🗓️ Cada compra entra no mês em que foi feita: ${monthsHTML()}</div></div><div class="note">Encontrei <b>${rows.length}</b> lançamentos · <b>${rows.filter((r) => r.dup).length}</b> já lançados antes — mesmo dia e mesmo valor (desmarcados, não serão duplicados) · <b>${rows.filter((r) => r.inst).length}</b> parcelados detectados.
       ${F.check('Inverter sinais (se despesas aparecerem como receitas)', 'flip', false)}</div>
       <div class="table-wrap" style="max-height:55vh"><table><thead><tr><th><input type="checkbox" data-mchange="all" checked></th><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th><th>Parcela</th></tr></thead><tbody>
-      ${rows.map((r) => `<tr style="${r.dup ? 'opacity:.5' : ''}"><td><input type="checkbox" data-mchange="inc" data-i="${r.idx}" ${r.include ? 'checked' : ''}></td><td>${U.dateBR(r.date)}</td><td>${U.esc(r.desc)} ${r.dup ? `<span class="chip warn" title="já existe: ${U.esc(r.dup.desc)} · ${U.dateBR(r.dup.date)}">já lançado${U.norm(r.dup.desc) !== U.norm(r.desc) ? ' como “' + U.esc(r.dup.desc.slice(0, 24)) + '”' : ''}</span>` : ''}</td>
+      ${rows.map((r) => `<tr style="${r.dup ? 'opacity:.5' : ''}"><td><input type="checkbox" data-mchange="inc" data-i="${r.idx}" ${r.include ? 'checked' : ''}></td><td>${U.dateBR(r.date)}${r.origDate ? `<br><small class="muted" title="data da compra original">compra: ${U.dateBR(r.origDate)}</small>` : ''}</td><td>${U.esc(r.desc)} ${r.dup ? `<span class="chip warn" title="já existe: ${U.esc(r.dup.desc)} · ${U.dateBR(r.dup.date)}">já lançado${U.norm(r.dup.desc) !== U.norm(r.desc) ? ' como “' + U.esc(r.dup.desc.slice(0, 24)) + '”' : ''}</span>` : ''}</td>
         <td>${catSelect('c' + r.idx, r.categoryId, `data-mchange="cat" data-i="${r.idx}"`)}</td>
         <td class="r" style="color:${r.kind === 'income' ? 'var(--ok)' : 'inherit'}">${r.kind === 'income' ? '+' : ''}${U.moneyTxt(r.value)}</td>
         <td>${r.inst ? `<label class="check"><input type="checkbox" data-mchange="mk" data-i="${r.idx}" ${r.mkInst ? 'checked' : ''}><small>${r.inst.cur}/${r.inst.total} criar parcelamento</small></label>` : ''}</td></tr>`).join('')}
       </tbody></table></div>`;
     App.modal({
-      title: `Conferir importação — ${U.ymLabel(meta.ym)}`, wide: true, body: render(), submitLabel: 'Importar selecionados',
+      title: 'Conferir importação', wide: true, body: render(), submitLabel: 'Importar selecionados',
       actions: {
         inc: (el) => { rows[el.dataset.i].include = el.checked; },
         mk: (el) => { rows[el.dataset.i].mkInst = el.checked; },
         cat: (el) => { rows[el.dataset.i].categoryId = el.value; },
         all: (el, form) => { rows.forEach((r) => (r.include = el.checked)); form.querySelectorAll('[data-mchange=inc]').forEach((c) => (c.checked = el.checked)); },
       },
-      onMount: (form) => form.flip.addEventListener('change', () => { rows.forEach((r) => (r.kind = r.kind === 'income' ? 'expense' : 'income')); form.querySelector('.modal-body').innerHTML = render(); form.flip.checked = true; }),
+      onMount: (form) => form.addEventListener('change', (e) => { if (e.target.name !== 'flip') return; const on = e.target.checked; rows.forEach((r) => (r.kind = r.kind === 'income' ? 'expense' : 'income')); form.querySelector('.modal-body').innerHTML = render(); form.flip.checked = on; }),
       onSubmit: async () => {
         const chosen = rows.filter((r) => r.include);
         let fileId = null;
@@ -424,11 +448,11 @@
         let newInst = 0;
         App.commit((s) => {
           for (const r of chosen) {
-            s.transactions.push({ id: U.uid(), date: r.date, desc: r.desc, value: r.value, kind: r.kind, categoryId: r.categoryId, account: (App.Money.acc(meta.accountId) || {}).name || meta.account, accountId: meta.accountId || undefined, source: 'import', reportId });
+            s.transactions.push({ id: U.uid(), date: r.date, notes: r.origDate ? `compra original em ${U.dateBR(r.origDate)}` : undefined, desc: r.desc, value: r.value, kind: r.kind, categoryId: r.categoryId, account: (App.Money.acc(meta.accountId) || {}).name || meta.account, accountId: meta.accountId || undefined, source: 'import', reportId });
             // aprende a categoria escolhida
             const k = App.parse.merchantKey(r.desc); if (k && r.categoryId !== App.parse.categorize(r.desc)) s.merchantMap[k] = r.categoryId;
             if (r.inst && r.mkInst && r.kind === 'expense') {
-              const startYM = U.addMonthsYM(meta.ym, -(r.inst.cur - 1));
+              const startYM = U.addMonthsYM(r.fy || meta.ym, -(r.inst.cur - 1));
               const mk = App.parse.merchantKey(r.desc);
               const exists = s.installments.find((i) => App.parse.merchantKey(i.desc) === mk && i.count === r.inst.total && Math.abs(i.parcel - r.value) < 0.05);
               if (!exists) { s.installments.push({ id: U.uid(), desc: r.desc.replace(/\s*-?\s*parc(ela)?\.?\s*\d+\s*(\/|de)\s*\d+/i, '').trim(), type: 'cartao', parcel: r.value, count: r.inst.total, startYM, cardId: meta.cardId || '', categoryId: r.categoryId, notes: 'criado pela importação' }); newInst++; }
@@ -437,7 +461,9 @@
           s.reports.push({ id: reportId, ym: meta.ym, account: meta.account, fileName: files.map((f) => f.name).join(', '), fileId, count: chosen.length, total: U.sum(chosen.filter((r) => r.kind === 'expense'), (r) => r.value), importedAt: U.today() });
         });
         App.toast(`${chosen.length} lançamentos importados${newInst ? ` · ${newInst} parcelamentos criados` : ''}`);
-        S.period = 'mes'; S.ref = meta.ym + '-01'; S.ym = meta.ym;
+        const byM = U.groupBy(chosen.filter((r) => r.kind === 'expense'), (r) => r.date.slice(0, 7));
+        const topM = Object.keys(byM).sort((a, b) => byM[b].length - byM[a].length)[0] || meta.ym;
+        S.period = 'mes'; S.ref = topM + '-01'; S.ym = topM;
         App.go('financas/visao');
       },
     });

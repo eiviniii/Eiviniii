@@ -118,10 +118,10 @@
   P.findDates = (text, defYear) => {
     const out = [];
     const t = U.norm(text);
-    const re = /(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})|(\d{1,2})(?:º|o)?\s+de\s+(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+(\d{4}))?/g;
+    const re = /(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})|(\d{1,2})(?:º|o)?\s+de\s+(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+(\d{4}))?|(\d{1,2})\s+(?:de\s+)?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*\.?\s+(?:de\s+)?(\d{4})/g;
     let m;
     while ((m = re.exec(t))) {
-      const iso = m[1] ? mk(fixYear(m[3]), +m[2], +m[1]) : mk(m[6] ? +m[6] : defYear || new Date().getFullYear(), MES[m[5]], +m[4]);
+      const iso = m[1] ? mk(fixYear(m[3]), +m[2], +m[1]) : m[4] ? mk(m[6] ? +m[6] : defYear || new Date().getFullYear(), MES[m[5]], +m[4]) : mk(+m[9], MES[m[8]], +m[7]);
       if (iso) out.push({ iso, index: m.index });
     }
     return out;
@@ -191,7 +191,7 @@
     .replace(/(^|\s)-\s+(?=\d)/g, '$1-');
 
   P.transactionsFromText = (text, ctx = {}) => {
-    const year = ctx.year || new Date().getFullYear();
+    const year = ctx.year || (ctx.ref ? +ctx.ref.slice(0, 4) : new Date().getFullYear());
     const items = [];
     // palavras genéricas só contam no INÍCIO (senão "HTM*RESUMOCANTADO" seria ignorado)
     const ignore = /(^(sub)?total|^saldo|^limite|^encargos|^juros|^iof|^vencimento|^resumo|^fatura anterior|pagamento recebido|pagamento efetuado|pagamentos? validos|pagamento de fatura|credito rotativo|pagamento minimo)/;
@@ -204,8 +204,10 @@
       const desc = m[2].replace(/\s+/g, ' ').replace(/(\w) \. (?=\w)/g, '$1. ').replace(/[\s,;-]+$/, '').trim();
       if (!desc || ignore.test(U.norm(desc))) continue;
       if (!/[a-zA-ZÀ-ú]{2,}/.test(desc.replace(/US\$|R\$/g, ''))) continue; // linha só com valores (ex.: vencimento)
-      const date = P.toISO(m[1].replace(/\s+de\s+/, ' '), year);
+      let date = P.toISO(m[1].replace(/\s+de\s+/, ' '), year);
       if (!date) continue;
+      // data sem ano (ex.: "28/12" numa fatura de janeiro): não pode ser depois do fechamento
+      if (ctx.ref && !/\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}|\d{4}/.test(m[1]) && date > U.addDays(ctx.ref, 10)) date = (+date.slice(0, 4) - 1) + date.slice(4);
       // 1ª coluna = R$; a 2ª (se houver) costuma ser US$ — usamos a de reais
       let raw = U.num(m[3].replace(/[\sR$]/g, ''));
       if (/-/.test(m[3]) || m[5] === 'C') raw = -Math.abs(raw);
@@ -215,16 +217,45 @@
     return { items, positiveIsExpense: true };
   };
 
+  /** Descobre vencimento e fechamento da fatura (no texto do PDF ou no nome do arquivo). */
+  P.statementInfo = (text, fileName = '') => {
+    const info = {};
+    const lines = P.fixSpaced(text || '').split('\n');
+    const grab = (re) => {
+      for (let i = 0; i < lines.length; i++) {
+        if (!re.test(U.norm(lines[i]))) continue;
+        const ds = P.findDates(lines[i]).concat(P.findDates(lines[i + 1] || '')).filter((d) => d.iso >= '2000');
+        if (ds.length) return ds[0].iso;
+      }
+      return null;
+    };
+    info.closing = grab(/(fatura fechada em|data de fechamento|fechamento da fatura|data do fechamento|fechada em)/);
+    info.due = grab(/(data de vencimento|vencimento da fatura|^vencimento|vencimento\s|vence em)/);
+    const fm = String(fileName).match(/(20\d{2})[-_.]?(\d{2})[-_.]?(\d{2})/);
+    if (!info.due && fm) info.due = `${fm[1]}-${fm[2]}-${fm[3]}`;
+    if (info.closing && info.due && info.due < info.closing) info.due = null; // proteção contra leitura errada
+    info.ym = (info.due || info.closing || '').slice(0, 7) || null;
+    info.source = info.ym ? (text ? 'pdf' : 'nome do arquivo') : null;
+    return info;
+  };
+
   P.transactions = async (file, ctx = {}) => {
     const k = P.kind(file);
-    if (k === 'ofx') return P.transactionsFromOFX(await file.text());
-    if (k === 'csv') return P.transactionsFromTable(await P.csvRows(file), ctx) || { items: [], positiveIsExpense: true };
-    if (k === 'sheet') {
-      for (const s of await P.sheetRows(file)) { const r = P.transactionsFromTable(s.rows, ctx); if (r && r.items.length) return r; }
-      return { items: [], positiveIsExpense: true };
+    let r;
+    if (k === 'ofx') r = P.transactionsFromOFX(await file.text());
+    else if (k === 'csv') r = P.transactionsFromTable(await P.csvRows(file), ctx) || { items: [], positiveIsExpense: true };
+    else if (k === 'sheet') {
+      r = { items: [], positiveIsExpense: true };
+      for (const s of await P.sheetRows(file)) { const x = P.transactionsFromTable(s.rows, ctx); if (x && x.items.length) { r = x; break; } }
+    } else {
+      const { text } = await P.read(file);
+      const info = P.statementInfo(text, file.name);
+      r = P.transactionsFromText(text, { ...ctx, ref: info.closing || info.due });
+      r.info = info;
+      return r;
     }
-    const { text } = await P.read(file);
-    return P.transactionsFromText(text, ctx);
+    r.info = P.statementInfo('', file.name);
+    return r;
   };
 
   /** Categoriza pela memória (o que você já corrigiu) e depois pelas palavras-chave. */
