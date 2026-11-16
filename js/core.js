@@ -80,6 +80,8 @@ window.App = window.App || {};
     C('Pets', '🐾', '#84cc16', ['petz', 'cobasi', 'pet ', 'veterin', 'petshop', 'pet shop']),
     C('Viagem', '✈️', '#10b981', ['hotel', 'airbnb', 'booking', 'latam', 'gol ', 'azul ', 'decolar', '123milhas', 'passagem', 'rodoviaria', 'pousada', 'hostel']),
     C('Investimentos', '📈', '#22d3ee', ['xp invest', 'aplicacao', 'aplicação', 'rico ', 'clear corretora', 'nuinvest', 'btg', 'tesouro', 'cdb']),
+    C('Salário', '💰', '#16a34a', ['salario', 'salário', 'pagamento salario', 'proventos', 'folha']),
+    C('Metas', '🎯', '#10b981', ['guardado para']),
     C('Transferências', '🔁', '#94a3b8', ['pix enviado', 'transferencia', 'transferência', 'ted ', 'doc ']),
     C('Outros', '📦', '#64748b', []),
   ];
@@ -91,11 +93,13 @@ window.App = window.App || {};
     { id: 'estudos', label: 'Estudos', icon: '📚', visible: true },
     { id: 'fitness', label: 'Fitness', icon: '💪', visible: true },
     { id: 'agenda', label: 'Agenda', icon: '📅', visible: true },
+    { id: 'sites', label: 'Sites úteis', icon: '🔗', visible: true },
     { id: 'ajustes', label: 'Ajustes', icon: '⚙️', visible: true },
   ];
 
   App.defaultWidgets = () => [
     { id: 'resumo', label: 'Resumo do mês', visible: true },
+    { id: 'atalhos', label: 'Atalhos (sites)', visible: true },
     { id: 'agenda', label: 'Próximos compromissos', visible: true },
     { id: 'treino', label: 'Treino de hoje', visible: true },
     { id: 'estudo', label: 'Estudos de hoje', visible: true },
@@ -103,6 +107,8 @@ window.App = window.App || {};
     { id: 'parcelas', label: 'Parcelas do mês', visible: true },
     { id: 'concursos', label: 'Contagem para provas', visible: true },
     { id: 'patrimonio', label: 'Patrimônio', visible: true },
+    { id: 'investir', label: 'Meta de investimento do mês', visible: true },
+    { id: 'notas', label: 'Notas rápidas', visible: true },
   ];
 
   App.defaultState = () => ({
@@ -134,6 +140,11 @@ window.App = window.App || {};
     workoutLogs: [],
     body: [],
     events: [],
+    sites: [],
+    accounts: [],
+    rules: [],
+    goals: [],
+    planner: null,
     notes: '',
   });
 
@@ -147,43 +158,36 @@ window.App = window.App || {};
     }
     return saved === undefined ? def : saved;
   }
-  App.load = () => {
-    let saved = null;
-    try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { console.warn(e); }
+  App.load = (saved) => {
     App.state = deepMerge(App.defaultState(), saved || {});
     // garante abas/widgets novos ao atualizar o sistema
+    for (const c of App.defaultCategories()) if (!App.state.categories.find((x) => x.id === c.id)) App.state.categories.splice(Math.max(0, App.state.categories.length - 1), 0, c);
     const s = App.state.settings;
     for (const [key, defs] of [['tabs', App.defaultTabs()], ['widgets', App.defaultWidgets()]]) {
-      for (const t of defs) if (!s[key].find((x) => x.id === t.id)) s[key].push(t);
+      for (const t of defs) if (!s[key].find((x) => x.id === t.id)) s[key].splice(Math.max(0, s[key].length - (key === 'tabs' ? 1 : 0)), 0, t);
     }
   };
-  const doSave = () => {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(App.state)); }
-    catch (e) { App.toast('Não foi possível salvar: armazenamento cheio. Faça um backup em Ajustes.', 'error'); }
+  App.save = (now) => {
+    if (!App.storage || !App.storage.backend) { try { localStorage.setItem(STORE_KEY, JSON.stringify(App.state)); } catch (e) { /* */ } return; }
+    if (now) return App.storage.flush();
+    App.storage.scheduleSave();
   };
-  const saveDebounced = U.debounce(doSave, 250);
-  App.save = (now) => (now ? doSave() : saveDebounced());
   App.commit = (fn) => { fn && fn(App.state); App.save(); App.rerender(); };
 
-  /* ---------- arquivos (IndexedDB) ---------- */
-  let dbp = null;
-  const db = () => dbp || (dbp = new Promise((res, rej) => {
-    const r = indexedDB.open('vidaos-files', 1);
-    r.onupgradeneeded = () => r.result.createObjectStore('files', { keyPath: 'id' });
-    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-  }));
-  const tx = async (mode, fn) => { const d = await db(); return new Promise((res, rej) => { const t = d.transaction('files', mode); const st = t.objectStore('files'); const r = fn(st); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); };
+  /* ---------- arquivos (navegador ou pendrive — ver storage.js) ---------- */
   App.files = {
-    put: async (file, id = U.uid()) => { await tx('readwrite', (st) => st.put({ id, name: file.name, type: file.type, size: file.size, blob: file })); return id; },
-    get: (id) => tx('readonly', (st) => st.get(id)),
-    del: (id) => tx('readwrite', (st) => st.delete(id)),
-    all: () => tx('readonly', (st) => st.getAll()),
+    put: (file, id) => App.storage.files.put(file, id),
+    get: (id) => App.storage.files.get(id),
+    del: (id) => App.storage.files.del(id),
+    all: () => App.storage.files.all(),
+    url: async (id) => { const f = await App.storage.files.get(id); return f ? URL.createObjectURL(f.blob) : null; },
     open: async (id) => {
-      const f = await App.files.get(id);
-      if (!f) return App.toast('Arquivo não encontrado neste navegador.', 'error');
+      const w = window.open('', '_blank');
+      const f = await App.storage.files.get(id);
+      if (!f) { w && w.close(); return App.toast('Arquivo não encontrado.', 'error'); }
       const url = URL.createObjectURL(f.blob);
-      window.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      if (w) w.location.href = url; else window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
     },
   };
 
@@ -277,6 +281,11 @@ window.App = window.App || {};
     config.options.plugins = config.options.plugins || {};
     config.options.plugins.legend = config.options.plugins.legend || { labels: { boxWidth: 10, usePointStyle: true } };
     const c = new Chart(canvas, config); App.charts.push(c); return c;
+  };
+  App.mix = (a, b, t) => {
+    const h = (x) => { x = x.replace('#', ''); if (x.length === 3) x = x.split('').map((c) => c + c).join(''); const n = parseInt(x, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    const A = h(a), Bc = h(b);
+    return '#' + A.map((v, i) => Math.round(v + (Bc[i] - v) * t).toString(16).padStart(2, '0')).join('');
   };
   App.destroyCharts = () => { App.charts.forEach((c) => c.destroy()); App.charts = []; };
   App.alpha = (hex, a) => { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map((x) => x + x).join('') : h, 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };

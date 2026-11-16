@@ -146,6 +146,7 @@
       </div>`; }).join('')}</div>`;
   };
 
+  views.biblioteca = () => App.Lib.view();
   views.historico = () => {
     const list = st().sessions.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 300);
     return `<div class="card"><header><h3>🕘 Histórico de estudos</h3><button class="btn primary" data-act="logSession">＋ Registrar</button></header>
@@ -225,23 +226,26 @@
     render(r) {
       const sub = views[r.sub] ? r.sub : 'painel'; this._sub = sub;
       return `<div class="page-head"><div><h1>📚 Estudos</h1><p>Matérias, materiais, cronograma, foco e concursos.</p></div></div>
-        ${App.subtabs('estudos', [['painel', 'Painel'], ['materias', 'Matérias & PDFs'], ['cronograma', 'Cronograma'], ['concursos', 'Concursos & editais'], ['historico', 'Histórico']], sub)}${views[sub]()}`;
+        ${App.subtabs('estudos', [['painel', 'Painel'], ['biblioteca', '🔎 Biblioteca'], ['materias', 'Matérias & PDFs'], ['cronograma', 'Cronograma'], ['concursos', 'Concursos & editais'], ['historico', 'Histórico']], sub)}${views[sub]()}`;
     },
-    mount() { if (this._sub === 'painel') mountPainel(); },
+    mount(el) {
+      if (this._sub === 'painel') mountPainel();
+      const inp = el.querySelector('[name=files]'); const ch = el.querySelector('#lib-chosen');
+      if (inp && ch) inp.addEventListener('change', () => { ch.textContent = [...inp.files].map((f) => f.name).join(', '); });
+    },
     actions: {
+      ...App.Lib.actions,
       addSubj: () => subjModal(), editSubj: (t) => subjModal(st().subjects.find((s) => s.id === t.dataset.id)),
       addBlock: (t) => blockModal({}, t.dataset.day !== undefined ? +t.dataset.day : undefined), editBlock: (t) => blockModal(st().schedule.find((b) => b.id === t.dataset.id)),
       logSession: () => sessionModal(),
       delSession: (t) => App.commit((x) => { x.sessions = x.sessions.filter((s) => s.id !== t.dataset.id); }),
       upMat: async (t) => {
-        const files = [...t.files]; let n = 0;
-        for (const f of files) {
-          try { const fileId = await App.files.put(f); st().materials.push({ id: U.uid(), subjectId: t.dataset.id, name: f.name, size: f.size, fileId, addedAt: U.today() }); n++; } catch (e) { App.toast(`Falha ao salvar ${f.name}`, 'error'); }
-        }
-        App.save(); App.rerender(); App.toast(`${n} arquivo(s) salvo(s)`);
+        App.toast('Salvando e lendo o conteúdo dos PDFs…');
+        let n = 0; try { n = await App.Lib.addFiles([...t.files], { subjectId: t.dataset.id }); } catch (e) { App.toast('Falha ao salvar: ' + e.message, 'error'); }
+        App.rerender(); App.toast(`${n} arquivo(s) salvo(s) e pesquisáveis`);
       },
       matStatus: (t) => App.commit((x) => { x.materials.find((m) => m.id === t.dataset.id).status = t.value; }),
-      delMat: (t) => App.confirm('Excluir este material?', () => App.commit((x) => { const m = x.materials.find((y) => y.id === t.dataset.id); App.files.del(m.fileId); x.materials = x.materials.filter((y) => y.id !== m.id); })),
+      delMat: (t) => App.confirm('Excluir este material?', () => App.commit((x) => { const m = x.materials.find((y) => y.id === t.dataset.id); App.files.del(m.fileId); App.Lib.forget(m.fileId); x.materials = x.materials.filter((y) => y.id !== m.id); })),
       tToggle: () => {
         if (T.running) { T.running = false; T.remaining = Math.max(0, Math.round((T.endAt - Date.now()) / 1000)); }
         else { T.running = true; T.endAt = Date.now() + (T.remaining ?? focusLen()) * 1000; try { Notification.permission === 'default' && Notification.requestPermission(); } catch (e) { /* */ } }
@@ -266,6 +270,6 @@
         t.value = '';
       },
     },
-    quick: { study: () => sessionModal() },
+    quick: { study: () => sessionModal(), lib: () => App.Lib.quickUpload() },
   };
 })(window.App);

@@ -5,24 +5,50 @@ Funciona direto no navegador (computador ou celular), **sem servidor e sem login
 
 ## Como abrir
 
-- **Mais fácil:** ative o GitHub Pages (Settings → Pages → Branch `main` / pasta raiz) e abra o link no celular. Dá para "Adicionar à tela inicial" e usar como app, inclusive offline.
-- **No computador:** baixe o repositório e dê dois cliques no `index.html`.
-  (Ou rode `python3 -m http.server` na pasta e abra `http://localhost:8000`.)
+### 💾 No pendrive (recomendado — nada fica no computador)
+1. Baixe o projeto (botão **Code → Download ZIP**) e extraia **a pasta inteira** dentro do pendrive.
+2. Abra o programa da pasta:
+   - **Windows:** `VidaOS-Windows.exe`
+   - **Mac:** `VidaOS-Mac` (Apple M1/M2/M3…) ou `VidaOS-Mac-Intel` — na 1ª vez: botão direito → **Abrir**.
+   - **Linux:** `VidaOS-Linux`
+3. Ele abre o Vida OS numa janela própria. **Tudo é gravado na pasta `dados` do pendrive** — inclusive o perfil do navegador. Fechou a janela, o programa encerra sozinho; no outro computador está tudo lá, como você deixou.
+4. Antes de tirar o pendrive, use **⏏️ Sair com segurança** (canto inferior esquerdo).
+
+Extras do modo pendrive:
+- **Senha + criptografia AES‑256** (Ajustes → Armazenamento & segurança): sem a senha ninguém lê seus dados nem seus PDFs, mesmo com o pendrive na mão. Dá para bloquear sozinho após X minutos sem uso.
+- **Cópias de segurança automáticas** em `dados/backups` (a cada 15 min de uso, guarda as 40 últimas).
+- O programa usa o Edge/Chrome/Brave que já existe no computador (só como "motor", com perfil no pendrive). Se quiser zero dependência, coloque um Chrome portátil em `navegador/` dentro da pasta.
+
+> ⚠️ Na 1ª vez o Windows pode mostrar "O Windows protegeu o computador" (o programa não tem assinatura paga). Clique em **Mais informações → Executar assim mesmo**. O código-fonte está em `portatil/main.go` e pode ser recompilado com `portatil/build.sh`.
+
+**Sem o programa:** abrindo o `index.html` no Chrome/Edge, vá em Ajustes → Armazenamento → **"Escolher pasta no pendrive"** — os dados passam a ser gravados direto nessa pasta.
+
+### 🌐 No navegador / celular
+Abra o `index.html` (ou publique no GitHub Pages: Settings → Pages). Nesse modo os dados ficam no navegador; use **Backup completo** para levar de um aparelho para outro. (Celulares não executam programas a partir de pendrive.)
 
 ## O que tem
 
 ### 💰 Finanças
+- **Contas & saldo:** cadastre suas contas (Nubank, Itaú…) e o **salário como receita fixa** — ele entra sozinho todo mês. Cada gasto lançado já desconta e mostra **quanto você tem agora** e a **previsão para o fim do mês**. Pagar uma conta na agenda também desconta do saldo.
+- **Orçamento & metas:** veja para onde vai o salário (contas fixas, parcelas, metas, investimento, gastos variáveis) e **quanto sobra**. Metas (ex.: casamento R$ 10 mil): informe quanto guarda por mês *ou* a data, e ele calcula quando chega — a meta vira um "gasto fixo" até ser atingida.
+- **Sem duplicar:** ao subir a fatura, qualquer item com **mesmo dia e mesmo valor** de algo que você já lançou é ignorado (mesmo com nome diferente).
+- **Oportunidades e alertas:** projeção do mês, categorias acima da média, assinaturas, delivery, receita × despesa e mapa de gastos por dia.
 - **Parcelas & dívidas:** cadastre a compra (parcela + nº de parcelas, ou o total). O sistema mostra a parcela do mês (ex.: 4/10), quantas faltam, quanto falta pagar, a soma de cada mês até quitar tudo e **em que mês você fica livre das parcelas**.
 - **Subir relatório do mês:** CSV (Nubank, Inter, C6…), OFX, Excel ou PDF de fatura. Ele **categoriza sozinho** (comida, mercado, farmácia, lazer…), ignora duplicados e pagamentos, e **detecta compras parceladas** ("Parcela 3/10") para criar o parcelamento automaticamente.
 - **Gastos:** filtre por dia, semana, mês, ano ou período; busque por nome, valor ou nota; gráficos por categoria e evolução no tempo. Se você corrige uma categoria, ele **aprende** aquele estabelecimento.
 - **Orçamento** por categoria, **cartões** (fechamento e vencimento aparecem na agenda).
 
 ### 📈 Investimentos
+- **Planejamento:** salário → quanto investir (% ou R$) → por quantos anos → onde você chega. Considera aumento anual, 13º, extras, IR e inflação; compara CDB, FIIs, Tesouro IPCA+ e poupança; tabela **ano a ano e mês a mês com aportes editáveis**; calculadoras ("quanto investir para ter X", "em quanto tempo chego", "quanto preciso para viver de renda").
 - **FIIs:** cotas, preço médio, cotação, último dividendo → renda mensal, DY, yield on cost e **número mágico**. Atualização automática de cotações/dividendos com token grátis da [brapi.dev](https://brapi.dev) (opcional).
 - **Renda fixa:** CDB/LCI/LCA/Tesouro/caixinha com % do CDI, prefixado ou IPCA+ → valor bruto, **IR regressivo** e líquido estimados.
 - **Patrimônio** por classe e instituição (XP, Nubank…), evolução mês a mês, registro de proventos e **simulador de renda passiva** (bola de neve com reinvestimento).
 
+### 🔗 Sites úteis
+Atalhos com logo, descrição e etiquetas — pesquise "remover fundo", "juntar pdf", "extrair texto"… Contato de WhatsApp direto, mais de 50 sugestões prontas e atalhos fixados no painel inicial. Aparecem também na busca geral (Ctrl+K).
+
 ### 📚 Estudos
+- **Biblioteca:** suba o PDF com a data, matéria e assunto; depois **pesquise qualquer palavra que esteja dentro dele** (mostra o trecho destacado). Funciona offline.
 - Matérias com **PDFs** salvos no aparelho, **cronograma semanal**, **Pomodoro** que registra suas horas, metas por matéria, sequência de dias.
 - **Concursos:** suba o **edital em PDF** e ele extrai datas de inscrição, isenção, pagamento, prova, **TAF**, **exames médicos**, avaliação psicológica, resultado, além de taxa, salário, vagas e banca — e joga tudo na agenda.
 - Revisões espaçadas (1, 7 e 30 dias) opcionais.
@@ -46,9 +72,14 @@ Nada sai do seu navegador (exceto a consulta opcional de cotações na brapi). C
 ```
 index.html          página principal
 css/style.css       visual
-js/core.js          estado, armazenamento, utilidades, UI
+js/core.js          estado, utilidades, UI
+js/storage.js       onde salvar: navegador, pasta ou pendrive + criptografia
+js/money.js         contas, saldo, metas, orçamento, insights, antiduplicação
+js/library.js       biblioteca de PDFs com busca no conteúdo
 js/parsers.js       leitura de PDF/Excel/CSV/OFX/foto + extração (fatura, bioimpedância, edital, treino)
 js/body.js          avatar corporal animado
 js/views/*.js       telas (início, finanças, investimentos, estudos, fitness, agenda, ajustes)
+portatil/           código do programa portátil (Go)
+VidaOS-*            programas prontos para Windows/Mac/Linux
 vendor/             Chart.js, pdf.js e SheetJS (locais, funcionam offline)
 ```

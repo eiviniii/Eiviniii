@@ -27,7 +27,7 @@
   Fin.monthRange = (ym) => { const [y, m] = ym.split('-').map(Number); return [`${ym}-01`, U.iso(new Date(y, m, 0))]; };
   Fin.monthExpenses = (ym) => U.sum(Fin.tx(...Fin.monthRange(ym)).filter((t) => t.kind !== 'income' && !Fin.isTransfer(t)), (t) => t.value);
   Fin.monthIncome = (ym) => U.sum(Fin.tx(...Fin.monthRange(ym)).filter((t) => t.kind === 'income'), (t) => t.value);
-  Fin.isTransfer = (t) => t.categoryId === 'investimentos' || t.categoryId === 'transferencias';
+  Fin.isTransfer = (t) => t.categoryId === 'investimentos' || t.categoryId === 'transferencias' || t.categoryId === 'metas';
   Fin.byCategory = (rows) => {
     const g = U.groupBy(rows.filter((t) => t.kind !== 'income'), (t) => t.categoryId);
     return Object.entries(g).map(([id, arr]) => ({ cat: Fin.cat(id), total: U.sum(arr, (t) => t.value), n: arr.length })).sort((a, b) => b.total - a.total);
@@ -81,7 +81,18 @@
     const diff = prev ? ((exp - prev) / prev) * 100 : 0;
     const top = Fin.tx(...Fin.monthRange(ym)).filter((t) => t.kind !== 'income' && !Fin.isTransfer(t)).sort((a, b) => b.value - a.value).slice(0, 6);
     const budgets = st().categories.filter((c) => c.budget > 0);
+    const ins = ym === U.ym() ? App.Money.insights() : [];
+    const maxRD = Math.max(exp, inc, 1);
     return `
+    <div class="grid g3" style="margin-bottom:16px">
+      ${App.Money.accCard()}
+      <div class="card"><header><h3>⚖️ Receita × despesa</h3><small class="muted" style="text-transform:capitalize">${U.ymLabel(ym)}</small></header>
+        <div class="rd"><div class="rd-val ${inc - exp >= 0 ? 'delta good' : 'delta badd'}">${U.money(Math.abs(inc - exp))}</div><div class="muted">${inc - exp >= 0 ? 'sobrou no mês' : inc ? `${U.fmt(((exp - inc) / inc) * 100, 2)}% acima da receita` : 'de despesas'}</div>
+          <div class="rd-bars"><i style="height:${(inc / maxRD) * 100}%" class="in"></i><i style="height:${(exp / maxRD) * 100}%" class="out"></i></div>
+          <div class="list"><div class="li"><span class="dot" style="background:var(--ok)"></span><div class="grow">Receita</div><b>${U.money(inc)}</b></div><div class="li"><span class="dot" style="background:var(--bad)"></span><div class="grow">Despesas</div><b>${U.money(exp)}</b></div></div></div></div>
+      <div class="card"><header><h3>🗓️ Gastos por dia</h3><small class="muted">${U.money(exp)}</small></header>${App.Money.heatmap(ym)}</div>
+    </div>
+    ${ins.length ? `<div class="card" style="margin-bottom:16px"><header><h3>💡 Oportunidades e alertas</h3><small class="muted">análise automática dos seus gastos</small></header><div class="insights">${ins.map((i) => `<div class="insight ${i.lvl}"><span class="ii">${i.ico}</span><div><b>${U.esc(i.t)}</b><small>${U.esc(i.s)}</small></div></div>`).join('')}</div></div>` : ''}
     <div class="row between" style="margin-bottom:14px">
       <div class="row"><button class="btn sm" data-act="ymPrev">‹</button><h2 style="min-width:170px;text-align:center;text-transform:capitalize">${U.ymLabel(ym)}</h2><button class="btn sm" data-act="ymNext">›</button>
       ${ym !== U.ym() ? '<button class="btn sm ghost" data-act="ymNow">Hoje</button>' : ''}</div>
@@ -233,6 +244,7 @@
         <form data-submit="import">
           ${F.row(F.month('Mês de referência (fatura)', 'ym', U.ym()), F.text('Conta / cartão', 'account', '', 'placeholder="Ex.: Nubank cartão" list="acc-list"'))}
           <datalist id="acc-list">${[...accounts(), ...st().cards.map((c) => c.name)].map((a) => `<option value="${U.esc(a)}">`).join('')}</datalist>
+          ${(st().accounts || []).length ? F.row(F.select('Descontar do saldo da conta', 'accountId', [['', 'Não — é fatura de cartão'], ...st().accounts.map((a) => [a.id, a.name + ' (extrato)'])], '')) : ''}
           ${st().cards.length ? F.row(F.select('Vincular parcelas ao cartão', 'cardId', [['', '— nenhum —'], ...st().cards.map((c) => [c.id, c.name])], '')) : ''}
           <label class="drop" id="imp-drop"><input type="file" name="files" multiple accept=".csv,.ofx,.xlsx,.xls,.pdf,.txt"><b>Arraste os arquivos aqui ou toque para escolher</b>pode enviar vários de uma vez</label>
           <div class="row mt"><button class="btn primary block">Ler arquivos</button></div>
@@ -279,7 +291,7 @@
       title: isNew ? 'Novo lançamento' : 'Editar lançamento',
       body: F.row(F.select('Tipo', 'kind', [['expense', 'Despesa'], ['income', 'Receita']], t.kind || 'expense'), F.date('Data', 'date', t.date || U.today())) +
         F.row(F.text('Descrição', 'desc', t.desc || '', 'required placeholder="Ex.: Mercado Assaí"', ''), F.number('Valor (R$)', 'value', t.value)) +
-        F.row(F.field('Categoria', catSelect('categoryId', t.categoryId || '')), F.text('Conta', 'account', t.account || '', 'list="acc-list2"')) +
+        F.row(F.field('Categoria', catSelect('categoryId', t.categoryId || '')), (st().accounts || []).length ? F.select('Conta (saldo)', 'accountId', [['', '— não mexe no saldo —'], ...st().accounts.map((a) => [a.id, a.name])], t.id ? t.accountId || '' : (App.Money.mainAcc() || {}).id) : F.text('Conta', 'account', t.account || '', 'list="acc-list2"')) +
         `<datalist id="acc-list2">${accounts().map((a) => `<option value="${U.esc(a)}">`).join('')}</datalist>` + F.area('Notas', 'notes', t.notes),
       onMount: (form) => { if (isNew) form.desc.addEventListener('change', () => { form.categoryId.value = App.parse.categorize(form.desc.value); }); },
       danger: isNew ? null : { label: 'Excluir', fn: () => App.commit((s) => { s.transactions = s.transactions.filter((x) => x.id !== t.id); }) },
@@ -287,6 +299,7 @@
         if (!d.desc || !d.value) { App.toast('Preencha descrição e valor.', 'error'); return false; }
         App.commit((s) => {
           const o = { ...t, ...d, value: Math.abs(d.value) };
+          if (d.accountId !== undefined) o.account = (App.Money.acc(d.accountId) || {}).name || '';
           if (isNew) s.transactions.push({ id: U.uid(), source: 'manual', ...o });
           else Object.assign(s.transactions.find((x) => x.id === t.id), o);
         });
@@ -376,19 +389,20 @@
   }
 
   function previewImport(items, meta, files) {
-    const existing = new Set(st().transactions.map((t) => `${t.date}|${U.norm(t.desc)}|${U.round(t.value)}`));
     let rows = items.map((it, idx) => {
       const isExp = it.pos ? it.raw > 0 : it.raw < 0;
       const value = Math.abs(it.raw);
-      const key = `${it.date}|${U.norm(it.desc)}|${U.round(value)}`;
       const inst = App.parse.installmentInfo(it.desc);
       const isPayment = /pagamento recebido|pagamento de fatura|pgto fatura|estorno/.test(U.norm(it.desc));
-      return { idx, ...it, kind: isExp ? 'expense' : 'income', value, categoryId: App.parse.categorize(it.desc, it.catHint), dup: existing.has(key), inst, include: !existing.has(key) && !isPayment, mkInst: !!inst };
+      return { idx, ...it, kind: isExp ? 'expense' : 'income', value, categoryId: App.parse.categorize(it.desc, it.catHint), dup: null, inst, include: !isPayment, mkInst: !!inst };
     });
-    const render = () => `<div class="note">Encontrei <b>${rows.length}</b> lançamentos · <b>${rows.filter((r) => r.dup).length}</b> já existentes (desmarcados) · <b>${rows.filter((r) => r.inst).length}</b> parcelados detectados.
+    // mesmo dia + mesmo valor que algo já lançado (mesmo com outro nome) → não entra de novo
+    App.Money.findDuplicates(rows);
+    // dentro do próprio arquivo, itens idênticos continuam valendo (compras repetidas reais)
+    const render = () => `<div class="note">Encontrei <b>${rows.length}</b> lançamentos · <b>${rows.filter((r) => r.dup).length}</b> já lançados antes — mesmo dia e mesmo valor (desmarcados, não serão duplicados) · <b>${rows.filter((r) => r.inst).length}</b> parcelados detectados.
       ${F.check('Inverter sinais (se despesas aparecerem como receitas)', 'flip', false)}</div>
       <div class="table-wrap" style="max-height:55vh"><table><thead><tr><th><input type="checkbox" data-mchange="all" checked></th><th>Data</th><th>Descrição</th><th>Categoria</th><th class="r">Valor</th><th>Parcela</th></tr></thead><tbody>
-      ${rows.map((r) => `<tr style="${r.dup ? 'opacity:.5' : ''}"><td><input type="checkbox" data-mchange="inc" data-i="${r.idx}" ${r.include ? 'checked' : ''}></td><td>${U.dateBR(r.date)}</td><td>${U.esc(r.desc)} ${r.dup ? '<span class="chip warn">duplicado</span>' : ''}</td>
+      ${rows.map((r) => `<tr style="${r.dup ? 'opacity:.5' : ''}"><td><input type="checkbox" data-mchange="inc" data-i="${r.idx}" ${r.include ? 'checked' : ''}></td><td>${U.dateBR(r.date)}</td><td>${U.esc(r.desc)} ${r.dup ? `<span class="chip warn" title="já existe: ${U.esc(r.dup.desc)} · ${U.dateBR(r.dup.date)}">já lançado${U.norm(r.dup.desc) !== U.norm(r.desc) ? ' como “' + U.esc(r.dup.desc.slice(0, 24)) + '”' : ''}</span>` : ''}</td>
         <td>${catSelect('c' + r.idx, r.categoryId, `data-mchange="cat" data-i="${r.idx}"`)}</td>
         <td class="r" style="color:${r.kind === 'income' ? 'var(--ok)' : 'inherit'}">${r.kind === 'income' ? '+' : ''}${U.moneyTxt(r.value)}</td>
         <td>${r.inst ? `<label class="check"><input type="checkbox" data-mchange="mk" data-i="${r.idx}" ${r.mkInst ? 'checked' : ''}><small>${r.inst.cur}/${r.inst.total} criar parcelamento</small></label>` : ''}</td></tr>`).join('')}
@@ -410,7 +424,7 @@
         let newInst = 0;
         App.commit((s) => {
           for (const r of chosen) {
-            s.transactions.push({ id: U.uid(), date: r.date, desc: r.desc, value: r.value, kind: r.kind, categoryId: r.categoryId, account: meta.account, source: 'import', reportId });
+            s.transactions.push({ id: U.uid(), date: r.date, desc: r.desc, value: r.value, kind: r.kind, categoryId: r.categoryId, account: (App.Money.acc(meta.accountId) || {}).name || meta.account, accountId: meta.accountId || undefined, source: 'import', reportId });
             // aprende a categoria escolhida
             const k = App.parse.merchantKey(r.desc); if (k && r.categoryId !== App.parse.categorize(r.desc)) s.merchantMap[k] = r.categoryId;
             if (r.inst && r.mkInst && r.kind === 'expense') {
@@ -429,13 +443,17 @@
     });
   }
 
+  views.contas = () => App.Money.viewContas();
+  views.metas = () => App.Money.viewMetas();
+
   /* ---------- view ---------- */
   App.views.financas = {
+    S,
     render(r) {
       const sub = views[r.sub] ? r.sub : 'visao';
       this._sub = sub;
       return `<div class="page-head"><div><h1>💰 Finanças</h1><p>Gastos, parcelas, relatórios e orçamento — tudo num lugar só.</p></div></div>
-        ${App.subtabs('financas', [['visao', 'Visão geral'], ['parcelas', 'Parcelas & dívidas'], ['gastos', 'Gastos'], ['importar', 'Subir relatório'], ['categorias', 'Categorias & orçamento'], ['cartoes', 'Cartões']], sub)}
+        ${App.subtabs('financas', [['visao', 'Visão geral'], ['contas', 'Contas & saldo'], ['metas', 'Orçamento & metas'], ['parcelas', 'Parcelas & dívidas'], ['gastos', 'Gastos'], ['importar', 'Subir relatório'], ['categorias', 'Categorias & orçamento'], ['cartoes', 'Cartões']], sub)}
         ${views[sub]()}`;
     },
     mount(el) {
@@ -451,6 +469,7 @@
       }
     },
     actions: {
+      ...App.Money.actions,
       ymPrev: () => { S.ym = U.addMonthsYM(S.ym, -1); App.rerender(); },
       ymNext: () => { S.ym = U.addMonthsYM(S.ym, 1); App.rerender(); },
       ymNow: () => { S.ym = U.ym(); App.rerender(); },

@@ -56,13 +56,19 @@
     const noProfile = !p.height || !p.birth;
     const metrics = ['weight', 'fat', 'muscle', 'fatMass', 'water', 'visceral', 'bmr', 'metaAge', 'lean', 'bone'];
     return `${noProfile ? `<div class="note warn">👤 Preencha <b>altura, sexo e data de nascimento</b> no <a href="#/fitness/perfil">Perfil</a> — o avatar e os cálculos dependem disso.</div>` : ''}
-    <div class="grid g3">
-      <div class="card span2"><header><h3>🧍 Seu corpo ${e ? `<small class="muted">· ${U.dateBR(e.date)}${e.source ? ' · ' + U.esc(e.source) : ''}</small>` : ''}</h3>
+    <div class="grid">
+      <div class="card"><header><h3>🧍 Seu corpo ${e ? `<small class="muted">· ${U.dateBR(e.date)}${e.source ? ' · ' + U.esc(e.source) : ''}</small>` : ''}</h3>
         <div class="row">${ents.length > 1 ? `${F.check('comparar com o 1º registro', 'ghost', S.ghost).replace('name="ghost"', 'data-change="ghost"')}<button class="btn sm" data-act="play">${playing ? '⏹' : '▶'} Animar evolução</button>` : ''}</div></header>
         <div class="avatar-wrap">
           <div><div class="avatar-host" id="avatar-host"></div>
             ${ents.length > 1 ? `<div class="timeline"><small>${U.dateBR(first.date).slice(0, 5)}</small><input type="range" min="0" max="${ents.length - 1}" value="${S.idx}" data-input="scrub" data-change="scrubDone"><small>${U.dateBR(ents[ents.length - 1].date).slice(0, 5)}</small></div>` : ''}
-            <div class="heat-legend"></div><div class="row between"><small>pouca gordura</small><small>acúmulo de gordura</small></div>
+            <div class="avatar-tools">
+              <div class="seg">${[['both', 'Frente + lado'], ['front', 'Frente'], ['side', 'Lado']].map(([v, l]) => `<button class="${(av().avatarView || 'both') === v ? 'on' : ''}" data-act="avView" data-v="${v}">${l}</button>`).join('')}</div>
+              <div class="seg">${[['holo', '🔮 Holograma'], ['skin', '🧑 Pele']].map(([v, l]) => `<button class="${(v === 'holo') === ((av().avatarSkin || 'holo') === 'holo') ? 'on' : ''}" data-act="avSkin" data-v="${v}">${l}</button>`).join('')}</div>
+              <div class="seg"><button class="${av().avatarHeat !== false ? 'on' : ''}" data-act="avToggle" data-k="avatarHeat">🔥 Gordura</button><button class="${av().avatarMuscles !== false ? 'on' : ''}" data-act="avToggle" data-k="avatarMuscles">💪 Músculos</button></div>
+            </div>
+            ${e && av().avatarHeat !== false ? `<div class="heat-legend"></div><div class="row between"><small>pouca gordura</small><small>acúmulo de gordura</small></div>
+            <div class="zone-list">${(() => { const pz = B.params(e, p).zones; return ['belly', 'chest', 'flank', 'thigh', 'arm', 'face'].map((k) => `<div><span class="dot" style="background:${B.heat(pz[k])}"></span>${B.ZONE_NAMES[k]}<b>${B.level(pz[k])}</b></div>`).join(''); })()}</div>` : ''}
           </div>
           <div>${e ? `
             <div class="row" style="margin-bottom:10px">${e.fat ? (() => { const c = B.fatClass(e.fat, p.sex); return `<span class="chip" style="color:${c.color}">● Gordura: ${c.label}</span>`; })() : ''}
@@ -75,7 +81,7 @@
           ` : App.empty('📏', 'Nenhuma medição ainda', 'Suba os arquivos da sua balança e do relógio, ou lance os dados manualmente.')}</div>
         </div>
       </div>
-      <div class="stack">
+      <div class="grid g2">
         <div class="card"><header><h3>⬆ Atualizar medidas</h3></header>
           <div class="note">Suba os relatórios da <b>balança de bioimpedância</b> e do <b>relógio Samsung</b> (PDF, foto/print, CSV do Samsung Health ou Excel). Se enviar dois, eu mesclo os valores.</div>
           <label class="drop"><input type="file" multiple accept=".pdf,.csv,.xlsx,.xls,.txt,image/*" data-change="bioFiles"><b>📎 Escolher arquivos</b>até 2 ou mais de uma vez</label>
@@ -99,7 +105,9 @@
   };
   const mountCorpo = (el) => {
     const host = el.querySelector('#avatar-host'); if (!host) return;
-    avatar = B.create(host);
+    const a = av();
+    host.dataset.view = a.avatarView || 'both';
+    avatar = B.create(host, { view: a.avatarView || 'both', heat: a.avatarHeat !== false, muscles: a.avatarMuscles !== false });
     const ents = Fit.entries().map(Fit.enrich);
     const p = prof();
     const e = ents[S.idx] || { weight: 0 };
@@ -109,6 +117,7 @@
     lastParams = B.params(e, p);
     setTimeout(() => avatar && avatar.to(lastParams, ghost), 120);
   };
+  const av = () => st().settings;
   const scrubTo = (i) => {
     S.idx = i; const ents = Fit.entries().map(Fit.enrich);
     lastParams = B.params(ents[i], prof());
@@ -388,6 +397,9 @@
     actions: {
       ghost: (t) => { S.ghost = t.checked; scrubTo(S.idx); },
       scrub: (t) => scrubTo(+t.value),
+      avView: (t) => { lastParams = null; App.commit((x) => { x.settings.avatarView = t.dataset.v; }); },
+      avSkin: (t) => App.commit((x) => { x.settings.avatarSkin = t.dataset.v === 'holo' ? 'holo' : (x.settings.lastSkin || 's2'); }),
+      avToggle: (t) => App.commit((x) => { x.settings[t.dataset.k] = x.settings[t.dataset.k] === false; }),
       scrubDone: () => App.rerender(),
       play: async (t) => {
         if (playing) { playing = 0; return App.rerender(); }

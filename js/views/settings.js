@@ -39,7 +39,11 @@
       <div class="card"><header><h3>📐 Formas e texto</h3></header>
         ${F.field(`Arredondamento dos cartões: <b>${s.radius}px</b>`, `<input type="range" min="0" max="28" value="${s.radius}" data-change="setInput" data-k="radius" data-num>`)}
         <div style="height:12px"></div>${F.field(`Tamanho do texto: <b>${s.fontScale}%</b>`, `<input type="range" min="85" max="125" step="5" value="${s.fontScale}" data-change="setInput" data-k="fontScale" data-num>`)}
-        <h4 style="margin:16px 0 8px">Estilo do avatar corporal</h4><div class="seg">${[['holo', '🔮 Holograma'], ['skin', '🧑 Pele'], ['mono', '⚪ Neutro']].map(([v, l]) => `<button class="${s.avatarSkin === v ? 'on' : ''}" data-act="set" data-k="avatarSkin" data-v="${v}">${l}</button>`).join('')}</div>
+        <h4 style="margin:16px 0 8px">Boneco corporal</h4>
+        <div class="seg">${[['holo', '🔮 Holograma'], ['skin', '🧑 Pele']].map(([v, l]) => `<button class="${(v === 'holo') === (s.avatarSkin === 'holo') ? 'on' : ''}" data-act="${v === 'holo' ? 'set' : 'skinMode'}" data-k="avatarSkin" data-v="${v}">${l}</button>`).join('')}</div>
+        ${s.avatarSkin !== 'holo' ? `<div class="swatches mt">${['s1', 's2', 's3', 's4', 's5', 'mono'].map((k) => `<div class="swatch ${s.avatarSkin === k ? 'on' : ''}" title="tom de pele" style="background:linear-gradient(90deg, ${App.Body.SKINS[k][2]}, ${App.Body.SKINS[k][0]}, ${App.Body.SKINS[k][2]})" data-act="skinTone" data-v="${k}"></div>`).join('')}</div>` : ''}
+        <div class="frow mt">${F.select('Cabelo', 'hs', [['short', 'Mostrar'], ['none', 'Sem cabelo']], s.avatarHairStyle || 'short', 'data-change="setSel" data-k="avatarHairStyle"')}${F.select('Cor do cabelo', 'hc', Object.keys(App.Body.HAIR).map((k) => [k, k[0].toUpperCase() + k.slice(1)]), s.avatarHair || 'preto', 'data-change="setSel" data-k="avatarHair"')}</div>
+        <div id="av-prev" class="avatar-host" style="max-width:300px"></div>
         <div style="height:14px"></div>${F.check('Modo privacidade (borra os valores em R$ — passe o mouse para ver)', 'privacy', s.privacy).replace('name="privacy"', 'data-change="toggle" data-k="privacy"')}
       </div></div>`;
   };
@@ -60,18 +64,53 @@
         <p class="muted mt"><small>Status do navegador: <b>${'Notification' in window ? Notification.permission : 'não suportado'}</b></small></p></div>
     </div>`;
   };
-  views.dados = () => `<div class="grid g2">
+  views.armazenamento = () => {
+    const S = App.storage, b = S.backend, remote = S.isRemote();
+    const where = b.kind === 'pendrive' ? `Pasta <b>${U.esc((S.info && S.info.dir) || 'dados')}</b> no pendrive` : b.kind === 'pasta' ? `Pasta <b>${U.esc(b.dir.name)}</b>` : 'Somente <b>neste navegador</b> deste computador';
+    return `<div class="grid g2">
+    <div class="card"><header><h3>${b.label} — onde seus dados estão</h3><span class="chip ${S.status === 'error' ? 'bad' : 'ok'}">${S.status === 'error' ? 'erro ao salvar' : 'salvando automaticamente'}</span></header>
+      <p>${where}.</p>
+      ${b.kind === 'pendrive' ? `<div class="note">✅ <b>Modo portátil ativo.</b> Tudo o que você faz é gravado no pendrive na hora. O computador não guarda nada — nem os dados, nem o navegador (o perfil do navegador também fica no pendrive). Cópias de segurança automáticas ficam em <code>dados/backups</code>.</div>
+        <button class="btn primary" data-act="safeExit">⏏️ Sair com segurança</button>` : ''}
+      ${b.kind === 'pasta' ? `<div class="note">Os dados são gravados direto na pasta escolhida. Para máxima privacidade use o <b>programa portátil</b> (o navegador deste PC ainda guarda uma referência à pasta).</div>
+        <div class="row"><button class="btn" data-act="toFolder">📂 Trocar de pasta</button><button class="btn ghost" data-act="toBrowser">Voltar a usar o navegador</button></div>` : ''}
+      ${b.kind === 'navegador' ? `<div class="note warn">Seus dados estão presos a este navegador. Para levar tudo no <b>pendrive</b>, use uma das opções:</div>
+        <ol class="steps">
+          <li><b>Programa portátil (recomendado):</b> copie a pasta do Vida OS para o pendrive e abra <code>VidaOS-Windows.exe</code> (ou <code>VidaOS-Mac</code> / <code>VidaOS-Linux</code>). Para trazer o que já está aqui: <button class="btn sm" data-act="export" data-files="1">⬇ Backup completo</button> e depois “Restaurar backup” dentro do programa.</li>
+          <li><b>Gravar direto numa pasta</b> (Chrome/Edge): ${S.folderSupported() ? '<button class="btn sm primary" data-act="toFolder">📂 Escolher pasta no pendrive e mover dados</button>' : '<i>não suportado neste navegador</i>'}</li>
+        </ol>` : ''}
+    </div>
+    <div class="card"><header><h3>🔒 Senha e criptografia</h3>${S.vault ? '<span class="chip ok">ativada</span>' : '<span class="chip">desativada</span>'}</header>
+      ${remote ? (S.vault ? `<p class="muted">Seus dados e PDFs estão <b>criptografados (AES‑256)</b>. Sem a senha, ninguém lê o conteúdo do pendrive.</p>
+          <div class="row"><button class="btn" data-act="pwChange">🔑 Trocar senha</button><button class="btn" data-act="lockNow">🔒 Bloquear agora</button><button class="btn ghost danger" data-act="pwRemove">Remover senha</button></div>
+          <div class="frow mt">${F.select('Bloquear sozinho após inatividade', 'al', [[0, 'Nunca'], [5, '5 minutos'], [10, '10 minutos'], [15, '15 minutos'], [30, '30 minutos'], [60, '1 hora']], ss().autoLockMin || 0, 'data-change="setSel" data-k="autoLockMin"')}</div>`
+        : `<p class="muted">Proteja tudo com uma senha. Se perder o pendrive, ninguém consegue abrir seus dados.</p><button class="btn primary" data-act="pwSet">🔒 Criar senha</button>
+          <div class="note warn mt">⚠️ Não existe “esqueci a senha”: sem ela os dados não podem ser recuperados. Guarde-a no seu gerenciador de chaves.</div>`)
+      : '<p class="muted">A senha com criptografia fica disponível nos modos <b>pendrive</b> e <b>pasta</b>.</p>'}
+    </div>
     <div class="card"><header><h3>💾 Backup</h3></header>
-      <p class="muted">Tudo fica salvo <b>apenas neste navegador</b>. Faça backup para não perder nada e para levar seus dados para o celular/outro computador.</p>
-      <div class="row"><button class="btn primary" data-act="export" data-files="0">⬇ Baixar backup (dados)</button><button class="btn" data-act="export" data-files="1">⬇ Backup completo (com PDFs)</button></div>
+      <p class="muted">Um arquivo único com todos os seus dados — serve para guardar uma cópia extra ou mudar de aparelho.</p>
+      <div class="row"><button class="btn primary" data-act="export" data-files="0">⬇ Backup (dados)</button><button class="btn" data-act="export" data-files="1">⬇ Backup completo (com PDFs)</button></div>
       <label class="btn btn-file mt">⬆ Restaurar backup<input type="file" accept=".json" data-change="import"></label>
-      <p class="muted mt" id="storage-info"><small>calculando uso de armazenamento…</small></p>
-      <p class="muted"><small>Último backup: ${ss().lastBackup ? U.dateBR(ss().lastBackup) : 'nunca'}</small></p></div>
+      <p class="muted mt" id="storage-info"><small>${st().transactions.length} lançamentos · ${st().materials.length} PDFs · ${(st().sites || []).length} sites</small></p>
+      <p class="muted"><small>Último backup manual: ${ss().lastBackup ? U.dateBR(ss().lastBackup) : 'nunca'}</small></p></div>
     <div class="card"><header><h3>🧹 Zona de perigo</h3></header>
       <button class="btn danger" data-act="wipe" data-what="transactions">Apagar todos os lançamentos</button>
       <button class="btn danger mt" data-act="wipe" data-what="all">Apagar TUDO e recomeçar</button></div>
-    <div class="card full"><header><h3>📝 Bloco de notas livre</h3></header><textarea rows="8" data-input="notes" placeholder="Anotações rápidas, ideias, metas do ano…">${U.esc(st().notes)}</textarea></div>
   </div>`;
+  };
+
+  const pwModal = (title, onOk) => App.modal({
+    title, submitLabel: 'Confirmar',
+    body: F.row(F.field('Nova senha', '<input type="password" name="p1" autocomplete="new-password" minlength="6">')) + F.row(F.field('Repita a senha', '<input type="password" name="p2" autocomplete="new-password">')) + '<p class="muted"><small>Use pelo menos 8 caracteres. Uma frase longa é ainda melhor.</small></p><p id="pw-prog" class="muted"></p>',
+    onSubmit: async (d, form) => {
+      if ((d.p1 || '').length < 6) { App.toast('A senha precisa ter pelo menos 6 caracteres.', 'error'); return false; }
+      if (d.p1 !== d.p2) { App.toast('As senhas não conferem.', 'error'); return false; }
+      const prog = form.querySelector('#pw-prog'); form.querySelector('[type=submit]').disabled = true; prog.textContent = 'Criptografando…';
+      await onOk(d.p1, (i, n) => { prog.textContent = `Criptografando arquivos ${i}/${n}…`; });
+      App.renderStorageBadge(); App.rerender();
+    },
+  });
 
   async function exportBackup(withFiles) {
     const data = { app: 'vida-os', exportedAt: new Date().toISOString(), state: st() };
@@ -88,10 +127,10 @@
     try {
       const data = JSON.parse(await file.text());
       if (!data.state) throw new Error('arquivo inválido');
-      App.confirm('Restaurar este backup? Os dados atuais deste navegador serão substituídos.', async () => {
-        localStorage.setItem('vidaos.state.v1', JSON.stringify(data.state));
+      App.confirm('Restaurar este backup? Os dados atuais serão substituídos.', async () => {
+        App.toast('Restaurando…');
         if (data.files) for (const f of data.files) { const blob = await (await fetch(f.data)).blob(); await App.files.put(new File([blob], f.name, { type: f.type }), f.id); }
-        App.load(); App.applyTheme(); App.rerender(); App.toast('Backup restaurado ✅');
+        App.load(data.state); await App.save(true); App.applyTheme(); App.rerender(); App.toast('Backup restaurado ✅');
       }, 'Restaurar');
     } catch (e) { App.toast('Não consegui ler o backup: ' + e.message, 'error'); }
   }
@@ -100,15 +139,18 @@
     render(r) {
       const sub = views[r.sub] ? r.sub : 'aparencia'; this._sub = sub;
       return `<div class="page-head"><div><h1>⚙️ Ajustes</h1><p>Deixe o sistema com a sua cara.</p></div></div>
-        ${App.subtabs('ajustes', [['aparencia', 'Aparência'], ['abas', 'Abas'], ['painel', 'Painel inicial'], ['preferencias', 'Preferências'], ['dados', 'Dados & backup']], sub)}${views[sub]()}`;
+        ${App.subtabs('ajustes', [['aparencia', 'Aparência'], ['abas', 'Abas'], ['painel', 'Painel inicial'], ['preferencias', 'Preferências'], ['armazenamento', '💾 Armazenamento & segurança']], sub)}${views[sub]()}`;
     },
     async mount() {
-      const el = document.getElementById('storage-info');
-      if (el && navigator.storage && navigator.storage.estimate) { const e = await navigator.storage.estimate(); el.innerHTML = `<small>Usando <b>${(e.usage / 1048576).toFixed(1)} MB</b> de ~${(e.quota / 1073741824).toFixed(1)} GB disponíveis · ${st().transactions.length} lançamentos · ${st().materials.length} materiais</small>`; }
+      const host = document.getElementById('av-prev');
+      if (host) { const ents = App.Fit.entries(); const e = ents.length ? App.Fit.enrich(ents[ents.length - 1]) : { weight: 0 }; App.Body.create(host, { view: 'both' }).to(App.Body.params(e, st().profile), null, 0); }
     },
     actions: {
       set: (t) => apply((s) => { s[t.dataset.k] = t.dataset.v; }),
       setInput: (t) => apply((s) => { s[t.dataset.k] = t.dataset.num !== undefined ? +t.value : t.value; }),
+      skinMode: () => apply((s) => { s.avatarSkin = s.lastSkin || 's2'; }),
+      skinTone: (t) => apply((s) => { s.avatarSkin = t.dataset.v; s.lastSkin = t.dataset.v; }),
+      setSel: (t) => apply((s) => { s[t.dataset.k] = t.value; }),
       toggle: (t) => apply((s) => { s[t.dataset.k] = t.checked; }),
       preset: (t) => apply((s) => Object.assign(s, PRESETS[+t.dataset.i][1])),
       vis: (t) => apply((s) => { s[t.dataset.key][+t.dataset.i].visible = t.checked; }),
@@ -118,11 +160,27 @@
       resetTabs: () => apply((s) => { s.tabs = App.defaultTabs(); }),
       savePrefs: (form) => { const d = App.formData(form); apply((s) => Object.assign(s, d)); App.toast('Preferências salvas'); },
       notifyToggle: async (t) => { if (t.checked && 'Notification' in window && Notification.permission !== 'granted') await Notification.requestPermission(); apply((s) => { s.notify = t.checked; }); },
+      safeExit: () => App.safeExit(),
+      lockNow: async () => { await App.storage.flush(); App.storage.lock(); },
+      pwSet: () => pwModal('Criar senha do cofre', (p, prog) => App.storage.setPassword(p, prog).then(() => App.toast('🔒 Cofre criado. Seus dados agora estão criptografados.'))),
+      pwChange: () => pwModal('Trocar senha', (p, prog) => App.storage.setPassword(p, prog).then(() => App.toast('Senha trocada.'))),
+      pwRemove: () => App.confirm('Remover a senha? Os dados voltam a ficar sem criptografia.', async () => { await App.storage.removePassword(); App.renderStorageBadge(); App.rerender(); App.toast('Senha removida.'); }, 'Remover'),
+      toFolder: async () => {
+        let target; try { target = await App.storage.pickFolder(); } catch (e) { return; }
+        const existing = await target.read('estado.json');
+        const go = async (copy) => {
+          if (copy) { App.toast('Copiando seus dados para a pasta…'); await App.storage.copyTo(target); }
+          await App.storage.useFolder(target); location.reload();
+        };
+        if (existing) App.modal({ title: 'Essa pasta já tem dados do Vida OS', body: '<p>Quer <b>abrir os dados da pasta</b> ou <b>substituí-los</b> pelos dados atuais?</p>', submitLabel: 'Abrir dados da pasta', danger: { label: 'Substituir pelos atuais', fn: () => go(true) }, onSubmit: () => go(false) });
+        else go(true);
+      },
+      toBrowser: () => App.confirm('Voltar a usar os dados salvos neste navegador? (os dados da pasta continuam lá)', () => App.storage.useBrowser(), 'Voltar'),
       export: (t) => exportBackup(t.dataset.files === '1'),
       import: (t) => { if (t.files[0]) importBackup(t.files[0]); t.value = ''; },
       notes: U.debounce((t) => { st().notes = t.value; App.save(); }, 400),
       wipe: (t) => App.confirm(t.dataset.what === 'all' ? '<b>Apagar absolutamente tudo?</b> Não dá para desfazer (a menos que você tenha backup).' : 'Apagar todos os lançamentos e relatórios?', async () => {
-        if (t.dataset.what === 'all') { localStorage.removeItem('vidaos.state.v1'); for (const f of await App.files.all()) await App.files.del(f.id); App.load(); App.applyTheme(); App.go('inicio'); App.rerender(); }
+        if (t.dataset.what === 'all') { for (const id of await App.storage.files.ids()) await App.files.del(id); App.load(null); await App.save(true); App.applyTheme(); App.go('inicio'); App.rerender(); }
         else App.commit((s) => { s.transactions = []; s.reports = []; });
         App.toast('Feito.');
       }, 'Apagar'),

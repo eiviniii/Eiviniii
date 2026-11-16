@@ -79,8 +79,16 @@
     const [id, date] = key.split('|');
     if (id === 'fatura') { const s = st().settings; s.paidFaturas = s.paidFaturas || []; const i = s.paidFaturas.indexOf(key); i >= 0 ? s.paidFaturas.splice(i, 1) : s.paidFaturas.push(key); return; }
     const e = st().events.find((x) => x.id === id); if (!e) return;
-    if (e.recur && e.recur !== 'none') { e.paidDates = e.paidDates || []; const i = e.paidDates.indexOf(date); i >= 0 ? e.paidDates.splice(i, 1) : e.paidDates.push(date); }
-    else e.paid = !e.paid;
+    let nowPaid;
+    if (e.recur && e.recur !== 'none') { e.paidDates = e.paidDates || []; const i = e.paidDates.indexOf(date); i >= 0 ? e.paidDates.splice(i, 1) : e.paidDates.push(date); nowPaid = i < 0; }
+    else { e.paid = !e.paid; nowPaid = e.paid; }
+    // conta paga → desconta do saldo da conta principal (desmarcar devolve)
+    const acc = App.Money && App.Money.mainAcc();
+    if (e.type === 'conta' && e.value && acc) {
+      if (nowPaid) st().transactions.push({ id: U.uid(), date: U.today() < (date || e.date) ? U.today() : (date || e.date), desc: e.title, value: +e.value, kind: 'expense', categoryId: App.parse.categorize(e.title) === 'outros' ? 'casa-contas' : App.parse.categorize(e.title), accountId: acc.id, account: acc.name, source: 'agenda', eventKey: key });
+      else st().transactions = st().transactions.filter((t) => t.eventKey !== key);
+      App.toast(nowPaid ? `✅ Paga · −${U.moneyTxt(e.value)} do saldo` : 'Pagamento desfeito');
+    }
   };
   A.toggleDone = toggleDone;
 

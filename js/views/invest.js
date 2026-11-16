@@ -57,7 +57,6 @@
   };
 
   /* ---------- estado da tela ---------- */
-  const SIM = { monthly: 300, months: 120, reinvest: true, dy: 0, growth: 0, goal: 1000 };
   const PALETTE = ['#7c5cff', '#22d3ee', '#f97316', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#a855f7', '#14b8a6', '#f43f5e'];
 
   const views = {};
@@ -142,45 +141,7 @@
     </div>`;
   };
 
-  views.simulador = () => {
-    const t = Inv.totals();
-    const dy = SIM.dy || (t.fii ? U.round((t.fiiIncome / t.fii) * 100, 2) : 0.9);
-    return `<div class="grid g3">
-      <div class="card"><header><h3>🧮 Simulador de renda passiva</h3></header>
-        <form data-submit="sim">
-          ${F.row(F.number('Patrimônio inicial (R$)', 'start', U.round(t.fii || 0)))}
-          ${F.row(F.number('Aporte mensal (R$)', 'monthly', SIM.monthly), F.number('Meses', 'months', SIM.months))}
-          ${F.row(F.number('DY mensal (%)', 'dy', dy, 'step="0.01"'), F.number('Valorização a.a. (%)', 'growth', SIM.growth))}
-          ${F.row(F.number('Meta de renda (R$/mês)', 'goal', SIM.goal))}
-          ${F.check('Reinvestir os dividendos (bola de neve)', 'reinvest', SIM.reinvest)}
-          <button class="btn primary block mt">Simular</button>
-        </form>
-      </div>
-      <div class="card span2" id="sim-out"></div>
-    </div>`;
-  };
-  const runSim = () => {
-    const t = Inv.totals();
-    const start = SIM.start ?? t.fii, dy = (SIM.dy || (t.fii ? (t.fiiIncome / t.fii) * 100 : 0.9)) / 100, g = Math.pow(1 + SIM.growth / 100, 1 / 12) - 1;
-    let pat = start, invested = start, goalAt = null; const series = [];
-    for (let m = 1; m <= SIM.months; m++) {
-      const div = pat * dy; pat = pat * (1 + g) + SIM.monthly + (SIM.reinvest ? div : 0); invested += SIM.monthly;
-      if (!goalAt && pat * dy >= SIM.goal) goalAt = m;
-      series.push({ m, pat, invested, income: pat * dy });
-    }
-    const last = series[series.length - 1] || { pat: start, income: 0, invested: start };
-    const el = document.getElementById('sim-out');
-    el.innerHTML = `<header><h3>📊 Resultado em ${SIM.months} meses (${U.fmt(SIM.months / 12, 1)} anos)</h3></header>
-      <div class="grid g3"><div class="stat"><div class="lbl">Patrimônio final</div><div class="val">${U.money(last.pat)}</div></div><div class="stat"><div class="lbl">Renda mensal final</div><div class="val">${U.money(last.income)}</div></div><div class="stat"><div class="lbl">Total aportado</div><div class="val">${U.money(last.invested)}</div></div></div>
-      <div class="note mt">${goalAt ? `🎯 Você atinge <b>${U.moneyTxt(SIM.goal)}/mês</b> em <b>${goalAt} meses</b> (${U.fmt(goalAt / 12, 1)} anos) — por volta de <b>${U.ymLabel(U.addMonthsYM(U.ym(), goalAt))}</b>.` : `Com esses parâmetros a meta de ${U.moneyTxt(SIM.goal)}/mês não é atingida no período. Aumente o aporte ou o prazo.`}</div>
-      <div class="chart-box lg"><canvas id="sim-chart"></canvas></div>`;
-    const pts = series.filter((s, i) => i % Math.max(1, Math.floor(series.length / 60)) === 0 || i === series.length - 1);
-    App.chart(document.getElementById('sim-chart'), { type: 'line', data: { labels: pts.map((s) => U.ymShort(U.addMonthsYM(U.ym(), s.m))), datasets: [
-      { label: 'Patrimônio', data: pts.map((s) => U.round(s.pat)), borderColor: App.cssVar('--accent'), backgroundColor: App.alpha(App.cssVar('--accent'), .15), fill: true, tension: .3, yAxisID: 'y' },
-      { label: 'Aportado', data: pts.map((s) => U.round(s.invested)), borderColor: '#94a3b8', borderDash: [5, 5], tension: .3, yAxisID: 'y' },
-      { label: 'Renda/mês', data: pts.map((s) => U.round(s.income)), borderColor: '#22c55e', tension: .3, yAxisID: 'y2' }] },
-      options: { interaction: { mode: 'index', intersect: false }, scales: { y: { position: 'left' }, y2: { position: 'right', grid: { display: false } } }, plugins: { tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${U.moneyTxt(c.raw)}` } } } } });
-  };
+  views.planejamento = () => App.Planner.view();
 
   views.proventos = () => {
     const list = st().dividends.slice().sort((a, b) => b.date.localeCompare(a.date));
@@ -270,20 +231,20 @@
     render(r) {
       const sub = views[r.sub] ? r.sub : 'carteira'; this._sub = sub;
       return `<div class="page-head"><div><h1>📈 Investimentos</h1><p>FIIs, renda fixa e patrimônio — com dividendos simulados mês a mês.</p></div></div>
-        ${App.subtabs('investimentos', [['carteira', 'Carteira'], ['fiis', 'FIIs'], ['rendafixa', 'Renda fixa'], ['proventos', 'Proventos'], ['simulador', 'Simulador']], sub)}${views[sub]()}`;
+        ${App.subtabs('investimentos', [['carteira', 'Carteira'], ['fiis', 'FIIs'], ['rendafixa', 'Renda fixa'], ['planejamento', '🧭 Planejamento'], ['proventos', 'Proventos']], sub)}${views[sub]()}`;
     },
     mount() {
       if (this._sub === 'carteira') mountCarteira();
       if (this._sub === 'fiis') mountFiis();
       if (this._sub === 'proventos') mountProv();
-      if (this._sub === 'simulador') runSim();
+      if (this._sub === 'planejamento') App.Planner.mount();
     },
     actions: {
+      ...App.Planner.actions,
       addFii: () => fiiModal(), editFii: (t) => fiiModal(st().fiis.find((x) => x.id === t.dataset.id)), buyFii: (t) => buyModal(st().fiis.find((x) => x.id === t.dataset.id)),
       addFixed: () => fixedModal(), editFixed: (t) => fixedModal(st().fixed.find((x) => x.id === t.dataset.id)),
       addOther: () => otherModal(), editOther: (t) => otherModal(st().otherAssets.find((x) => x.id === t.dataset.id)),
       refreshQuotes,
-      sim: (form) => { Object.assign(SIM, App.formData(form)); App.destroyCharts(); runSim(); },
       logMonth: () => {
         const ym = U.ym();
         const items = st().fiis.filter((x) => x.div && x.qty);

@@ -69,6 +69,10 @@
       <div class="row mt"><span class="chip">FIIs ${U.money(t.fii)}</span><span class="chip">Renda fixa ${U.money(t.fixed)}</span>${t.other ? `<span class="chip">Outros ${U.money(t.other)}</span>` : ''}</div></div>`;
   };
 
+  W.atalhos = () => App.Sites.widget();
+  W.notas = () => `<div class="card"><header><h3>📝 Notas rápidas</h3><small class="muted">salva sozinho</small></header><textarea rows="7" data-input="dashNotes" placeholder="Ideias, lembretes, coisas para não esquecer…">${U.esc(st().notes)}</textarea></div>`;
+  W.investir = () => App.Planner.widget();
+
   App.views.inicio = {
     render() {
       const name = st().profile.name;
@@ -89,6 +93,7 @@
       if (c && ents.length) App.chart(c, { type: 'line', data: { labels: ents.map((e) => U.dateBR(e.date).slice(0, 5)), datasets: [{ data: ents.map((e) => e.weight), borderColor: App.cssVar('--accent'), backgroundColor: App.alpha(App.cssVar('--accent'), .15), fill: true, tension: .35, pointRadius: 2 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
     },
     actions: {
+      dashNotes: U.debounce((t) => { st().notes = t.value; App.save(); }, 400),
       agDone: (t) => App.commit(() => App.Agenda.toggleDone(t.dataset.k)),
       agEdit: (t) => App.Agenda.eventModal(st().events.find((e) => e.id === t.dataset.id)),
     },

@@ -19,7 +19,12 @@
     </div>
     <nav id="nav" class="nav"></nav>
     <div class="side-foot">
-      <button class="btn ghost sm" id="privacy-btn" title="Ocultar valores (modo privacidade)">👁️ Privacidade</button>
+      <a href="#/ajustes/armazenamento" class="save-badge" id="save-badge" title="Onde seus dados estão salvos"></a>
+      <div class="row">
+        <button class="btn ghost sm" id="privacy-btn" title="Ocultar valores (modo privacidade)">👁️</button>
+        <button class="btn ghost sm" id="lock-btn" title="Bloquear (pede a senha de novo)" style="display:none">🔒</button>
+        <button class="btn sm" id="quit-btn" title="Salvar tudo e fechar" style="display:none">⏏️ Sair com segurança</button>
+      </div>
     </div>
   </aside>
 
@@ -27,10 +32,11 @@
     <header class="topbar">
       <div class="search">
         <span>🔎</span>
-        <input id="gsearch" placeholder="Buscar gastos, eventos, materiais, exercícios…  (Ctrl+K)" autocomplete="off">
+        <input id="gsearch" placeholder="Pesquisar tudo: sites, PDFs, gastos, agenda…  (Ctrl+K)" autocomplete="off">
         <div id="gresults" class="gresults"></div>
       </div>
       <button class="btn primary" id="quick-btn">＋ Rápido</button>
+      <a href="#/ajustes/armazenamento" class="save-badge mobile-only" id="save-badge-m" title="Armazenamento"></a>
     </header>
     <div id="view" class="view"></div>
   </main>
@@ -52,14 +58,19 @@
   </script>
   <!-- aplicativo -->
   <script src="js/core.js"></script>
+  <script src="js/storage.js"></script>
   <script src="js/parsers.js"></script>
   <script src="js/body.js"></script>
+  <script src="js/money.js"></script>
+  <script src="js/library.js"></script>
   <script src="js/views/dashboard.js"></script>
   <script src="js/views/finance.js"></script>
+  <script src="js/views/planner.js"></script>
   <script src="js/views/invest.js"></script>
   <script src="js/views/study.js"></script>
   <script src="js/views/fitness.js"></script>
   <script src="js/views/agenda.js"></script>
+  <script src="js/views/sites.js"></script>
   <script src="js/views/settings.js"></script>
   <script src="js/app.js"></script>
 </body>
