@@ -53,6 +53,13 @@
   function autoLock() {
     let last = Date.now();
     ['mousemove', 'keydown', 'touchstart', 'click'].forEach((ev) => document.addEventListener(ev, () => (last = Date.now()), { passive: true }));
+    // bloquear ao minimizar / trocar de janela (como o KeePassXC)
+    let hideT = null;
+    document.addEventListener('visibilitychange', () => {
+      const sec = +App.state.settings.lockOnHide || 0;
+      clearTimeout(hideT);
+      if (document.hidden && sec && App.storage.vault) hideT = setTimeout(async () => { if (document.hidden) { await App.storage.flush(); App.storage.lock(); } }, sec * 1000);
+    });
     setInterval(async () => {
       const min = +App.state.settings.autoLockMin || 0;
       if (App.storage.vault && min && Date.now() - last > min * 60000) { await App.storage.flush(); App.storage.lock(); }

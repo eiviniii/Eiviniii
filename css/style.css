@@ -438,3 +438,9 @@ code { background: var(--card2); padding: 1px 6px; border-radius: 6px; font-size
 .snip { font-size: .86rem; margin-top: 8px; padding: 8px 10px; background: var(--card2); border-radius: 8px; border-left: 3px solid var(--accent); line-height: 1.5; }
 .lib-group { margin: 14px 0 4px; text-transform: capitalize; } .lib-group:first-child { margin-top: 0; }
 .plan-stats .val { font-size: 1.3rem; word-break: break-word; }
+
+.pw-wrap { position: relative; display: flex; align-items: center; }
+.pw-wrap input { padding-right: 42px; }
+.pw-wrap .icon-btn { position: absolute; right: 4px; }
+.pw-meter { height: 6px; border-radius: 99px; background: var(--card2); overflow: hidden; margin-top: 6px; }
+.pw-meter i { display: block; height: 100%; width: 0; transition: .3s; }

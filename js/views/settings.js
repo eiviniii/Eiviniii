@@ -81,9 +81,10 @@
         </ol>` : ''}
     </div>
     <div class="card"><header><h3>🔒 Senha e criptografia</h3>${S.vault ? '<span class="chip ok">ativada</span>' : '<span class="chip">desativada</span>'}</header>
-      ${remote ? (S.vault ? `<p class="muted">Seus dados e PDFs estão <b>criptografados (AES‑256)</b>. Sem a senha, ninguém lê o conteúdo do pendrive.</p>
+      ${remote ? (S.vault ? `<p class="muted">Seus dados e PDFs estão <b>criptografados (AES‑256)</b>, no mesmo modelo do KeePassXC: sem a senha${App.storage.vault && App.storage.vault.keyfile ? ' e o arquivo-chave' : ''}, ninguém lê o conteúdo do pendrive.</p>
           <div class="row"><button class="btn" data-act="pwChange">🔑 Trocar senha</button><button class="btn" data-act="lockNow">🔒 Bloquear agora</button><button class="btn ghost danger" data-act="pwRemove">Remover senha</button></div>
-          <div class="frow mt">${F.select('Bloquear sozinho após inatividade', 'al', [[0, 'Nunca'], [5, '5 minutos'], [10, '10 minutos'], [15, '15 minutos'], [30, '30 minutos'], [60, '1 hora']], ss().autoLockMin || 0, 'data-change="setSel" data-k="autoLockMin"')}</div>`
+          <div class="frow mt">${F.select('Bloquear sozinho após inatividade', 'al', [[0, 'Nunca'], [5, '5 minutos'], [10, '10 minutos'], [15, '15 minutos'], [30, '30 minutos'], [60, '1 hora']], ss().autoLockMin || 0, 'data-change="setSel" data-k="autoLockMin"')}${F.select('Ao minimizar / trocar de janela', 'lh', [[0, 'Não bloquear'], [10, 'Bloquear após 10 s'], [60, 'Bloquear após 1 min']], ss().lockOnHide || 0, 'data-change="setSel" data-k="lockOnHide"')}</div>
+          <p class="muted"><small>🔐 ${App.storage.vault.v >= 2 ? `AES‑256‑GCM · PBKDF2‑SHA256 ${U.fmt(App.storage.vault.iter / 1000, 0)} mil iterações${App.storage.vault.keyfile ? ' · <b>senha + arquivo-chave</b>' : ' · só senha'}` : 'Cofre antigo (310 mil iterações) — use “Trocar senha” para atualizar para o padrão novo.'}</small></p>`
         : `<p class="muted">Proteja tudo com uma senha. Se perder o pendrive, ninguém consegue abrir seus dados.</p><button class="btn primary" data-act="pwSet">🔒 Criar senha</button>
           <div class="note warn mt">⚠️ Não existe “esqueci a senha”: sem ela os dados não podem ser recuperados. Guarde-a no seu gerenciador de chaves.</div>`)
       : '<p class="muted">A senha com criptografia fica disponível nos modos <b>pendrive</b> e <b>pasta</b>.</p>'}
@@ -100,17 +101,35 @@
   </div>`;
   };
 
-  const pwModal = (title, onOk) => App.modal({
-    title, submitLabel: 'Confirmar',
-    body: F.row(F.field('Nova senha', '<input type="password" name="p1" autocomplete="new-password" minlength="6">')) + F.row(F.field('Repita a senha', '<input type="password" name="p2" autocomplete="new-password">')) + '<p class="muted"><small>Use pelo menos 8 caracteres. Uma frase longa é ainda melhor.</small></p><p id="pw-prog" class="muted"></p>',
-    onSubmit: async (d, form) => {
-      if ((d.p1 || '').length < 6) { App.toast('A senha precisa ter pelo menos 6 caracteres.', 'error'); return false; }
-      if (d.p1 !== d.p2) { App.toast('As senhas não conferem.', 'error'); return false; }
-      const prog = form.querySelector('#pw-prog'); form.querySelector('[type=submit]').disabled = true; prog.textContent = 'Criptografando…';
-      await onOk(d.p1, (i, n) => { prog.textContent = `Criptografando arquivos ${i}/${n}…`; });
-      App.renderStorageBadge(); App.rerender();
-    },
-  });
+  const pwModal = (title, onOk) => {
+    let keyBytes = null;
+    App.modal({
+      title, submitLabel: 'Confirmar',
+      body: F.row(F.field('Nova senha-mestra', '<div class="pw-wrap"><input type="password" name="p1" autocomplete="new-password" data-minput="str"><button type="button" class="icon-btn" data-mact="eye">👁️</button></div>')) +
+        '<div class="pw-meter"><i id="pw-bar"></i></div><p class="muted" style="margin:4px 0 12px"><small id="pw-lbl">Dica: uma frase longa (ex.: “café forte antes do treino de terça”) é mais forte e mais fácil de lembrar.</small></p>' +
+        F.row(F.field('Repita a senha', '<input type="password" name="p2" autocomplete="new-password">')) +
+        `<h4 style="margin:8px 0">🔑 Arquivo-chave (opcional, como no KeePassXC)</h4>
+        <p class="muted" style="margin-top:0"><small>Exige a senha <b>e</b> um arquivo para abrir. Guarde o arquivo <b>fora</b> do pendrive (celular, nuvem, outro pendrive). Se perder o arquivo, os dados não abrem.</small></p>
+        <div class="seg"><button type="button" class="on" data-mact="kfNone">Sem arquivo</button><button type="button" data-mact="kfNew">Gerar novo</button><label class="btn-file" style="position:relative;padding:6px 11px;cursor:pointer">Usar um existente<input type="file" data-mchange="kfPick" style="position:absolute;inset:0;opacity:0"></label></div>
+        <p id="kf-info" class="muted"><small>Nenhum arquivo-chave.</small></p><p id="pw-prog" class="muted"></p>`,
+      actions: {
+        eye: (b, f) => { f.p1.type = f.p2.type = f.p1.type === 'password' ? 'text' : 'password'; },
+        str: (el, f) => { const r = App.storage.strength(el.value); const bar = f.querySelector('#pw-bar'); bar.style.width = r.score * 25 + '%'; bar.style.background = r.color; f.querySelector('#pw-lbl').innerHTML = el.value ? `Força: <b style="color:${r.color}">${r.label}</b> (~${r.bits} bits)` : ''; },
+        kfNone: (b, f) => { keyBytes = null; seg(f, 0); f.querySelector('#kf-info').innerHTML = '<small>Nenhum arquivo-chave.</small>'; },
+        kfNew: (b, f) => { keyBytes = App.storage.newKeyFile(); seg(f, 1); f.querySelector('#kf-info').innerHTML = '<small>✅ <b>vidaos.chave</b> baixado. Mova-o para um lugar seguro <b>fora do pendrive</b>.</small>'; },
+        kfPick: async (inp, f) => { const file = inp.files[0]; if (!file) return; keyBytes = new Uint8Array(await file.arrayBuffer()); seg(f, 2); f.querySelector('#kf-info').innerHTML = `<small>✅ Usando <b>${U.esc(file.name)}</b> como arquivo-chave.</small>`; },
+      },
+      onSubmit: async (d, form) => {
+        if ((d.p1 || '').length < 8) { App.toast('Use pelo menos 8 caracteres.', 'error'); return false; }
+        if (d.p1 !== d.p2) { App.toast('As senhas não conferem.', 'error'); return false; }
+        if (App.storage.strength(d.p1).score < 2 && !keyBytes) { App.toast('Senha fraca demais. Use uma frase mais longa ou um arquivo-chave.', 'error'); return false; }
+        const prog = form.querySelector('#pw-prog'); form.querySelector('[type=submit]').disabled = true; prog.textContent = 'Criptografando…';
+        await onOk(d.p1, (i, n) => { prog.textContent = `Criptografando arquivos ${i}/${n}…`; }, keyBytes);
+        App.renderStorageBadge(); App.rerender();
+      },
+    });
+    function seg(f, i) { f.querySelectorAll('.seg > *').forEach((x, j) => x.classList.toggle('on', i === j)); }
+  };
 
   async function exportBackup(withFiles) {
     const data = { app: 'vida-os', exportedAt: new Date().toISOString(), state: st() };
@@ -162,8 +181,8 @@
       notifyToggle: async (t) => { if (t.checked && 'Notification' in window && Notification.permission !== 'granted') await Notification.requestPermission(); apply((s) => { s.notify = t.checked; }); },
       safeExit: () => App.safeExit(),
       lockNow: async () => { await App.storage.flush(); App.storage.lock(); },
-      pwSet: () => pwModal('Criar senha do cofre', (p, prog) => App.storage.setPassword(p, prog).then(() => App.toast('🔒 Cofre criado. Seus dados agora estão criptografados.'))),
-      pwChange: () => pwModal('Trocar senha', (p, prog) => App.storage.setPassword(p, prog).then(() => App.toast('Senha trocada.'))),
+      pwSet: () => pwModal('Criar senha do cofre', (p, prog, kf) => App.storage.setPassword(p, prog, kf).then(() => App.toast('🔒 Cofre criado. Seus dados agora estão criptografados.'))),
+      pwChange: () => pwModal('Trocar senha / arquivo-chave', (p, prog, kf) => App.storage.setPassword(p, prog, kf).then(() => App.toast('Senha trocada.'))),
       pwRemove: () => App.confirm('Remover a senha? Os dados voltam a ficar sem criptografia.', async () => { await App.storage.removePassword(); App.renderStorageBadge(); App.rerender(); App.toast('Senha removida.'); }, 'Remover'),
       toFolder: async () => {
         let target; try { target = await App.storage.pickFolder(); } catch (e) { return; }

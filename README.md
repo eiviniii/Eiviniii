@@ -15,7 +15,11 @@ Funciona direto no navegador (computador ou celular), **sem servidor e sem login
 4. Antes de tirar o pendrive, use **⏏️ Sair com segurança** (canto inferior esquerdo).
 
 Extras do modo pendrive:
-- **Senha + criptografia AES‑256** (Ajustes → Armazenamento & segurança): sem a senha ninguém lê seus dados nem seus PDFs, mesmo com o pendrive na mão. Dá para bloquear sozinho após X minutos sem uso.
+- **Cofre no estilo KeePassXC** (Ajustes → Armazenamento & segurança):
+  - senha-mestra com medidor de força + **arquivo-chave opcional** (2º fator: sem o arquivo, a senha sozinha não abre);
+  - criptografia **AES‑256‑GCM** de todos os dados e PDFs; chave derivada com **PBKDF2‑SHA256, 600 mil iterações**;
+  - bloqueio automático por inatividade e **ao minimizar a janela**.
+  - ⚠️ Não existe "esqueci a senha": sem a senha (e o arquivo-chave, se usar), os dados não podem ser recuperados.
 - **Cópias de segurança automáticas** em `dados/backups` (a cada 15 min de uso, guarda as 40 últimas).
 - O programa usa o Edge/Chrome/Brave que já existe no computador (só como "motor", com perfil no pendrive). Se quiser zero dependência, coloque um Chrome portátil em `navegador/` dentro da pasta.
 

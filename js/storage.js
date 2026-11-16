@@ -19,8 +19,17 @@
   /* ---------- criptografia ---------- */
   const Crypto = {
     key: null,
-    async derive(pass, salt, iterations) {
-      const base = await crypto.subtle.importKey('raw', te.encode(pass), 'PBKDF2', false, ['deriveKey']);
+    /** v1: PBKDF2(senha). v2 (estilo KeePassXC): PBKDF2( SHA256( SHA256(senha) || SHA256(arquivo-chave) ) ). */
+    async composite(pass, keyfile) {
+      const h = async (u8) => new Uint8Array(await crypto.subtle.digest('SHA-256', u8));
+      const parts = [await h(te.encode(pass))];
+      if (keyfile) parts.push(await h(keyfile));
+      const all = new Uint8Array(parts.length * 32); parts.forEach((p, i) => all.set(p, i * 32));
+      return h(all);
+    },
+    async derive(pass, salt, iterations, vault, keyfile) {
+      const material = vault && vault.v >= 2 ? await Crypto.composite(pass, keyfile) : te.encode(pass);
+      const base = await crypto.subtle.importKey('raw', material, 'PBKDF2', false, ['deriveKey']);
       return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
     },
     async enc(u8, key = Crypto.key) {
@@ -151,10 +160,10 @@
   };
 
   /* ---------- cofre (senha) ---------- */
-  const ITER = 310000;
+  const ITER = 600000; // recomendação OWASP para PBKDF2-SHA256
   S.loadVault = async () => { const u8 = await S.backend.read('cofre.json'); S.vault = u8 ? JSON.parse(td.decode(u8)) : null; return S.vault; };
-  S.unlock = async (pass) => {
-    const v = S.vault; const key = await Crypto.derive(pass, unb64(v.salt), v.iter);
+  S.unlock = async (pass, keyfile) => {
+    const v = S.vault; const key = await Crypto.derive(pass, unb64(v.salt), v.iter, v, keyfile);
     try { const ok = td.decode(await Crypto.dec(unb64(v.check), key)); if (ok !== 'vidaos-ok') return false; } catch (e) { return false; }
     Crypto.key = key; return true;
   };
@@ -174,14 +183,32 @@
     if (newVault) await S.backend.write('cofre.json', te.encode(JSON.stringify(newVault))); else await S.backend.remove('cofre.json');
     await S.saveState(App.state);
   };
-  S.setPassword = async (pass, progress) => {
+  S.setPassword = async (pass, progress, keyfile) => {
     const salt = crypto.getRandomValues(new Uint8Array(16));
-    const key = await Crypto.derive(pass, salt, ITER);
-    const vault = { v: 1, kdf: 'PBKDF2-SHA256', iter: ITER, salt: b64(salt), check: b64(await Crypto.enc(te.encode('vidaos-ok'), key)) };
+    const meta = { v: 2, kdf: 'PBKDF2-SHA256', iter: ITER, keyfile: !!keyfile };
+    const key = await Crypto.derive(pass, salt, ITER, meta, keyfile);
+    const vault = { ...meta, salt: b64(salt), check: b64(await Crypto.enc(te.encode('vidaos-ok'), key)) };
     await reencrypt(key, vault, progress);
   };
   S.removePassword = (progress) => reencrypt(null, null, progress);
   S.lock = () => { Crypto.key = null; location.reload(); };
+  /** Gera um arquivo-chave aleatório (512 bits) e baixa. */
+  S.newKeyFile = () => {
+    const rnd = crypto.getRandomValues(new Uint8Array(64));
+    const body = `VIDAOS-ARQUIVO-CHAVE v1\nGuarde este arquivo FORA do pendrive (celular, nuvem, outro pendrive).\nSem ele, junto com a senha, os dados nao abrem.\n${b64(rnd)}\n`;
+    const bytes = te.encode(body);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' })); a.download = 'vidaos.chave'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    return bytes;
+  };
+  S.strength = (p) => {
+    if (!p) return { score: 0, label: '', color: 'var(--line)' };
+    let bits = 0; const pool = (/[a-z]/.test(p) ? 26 : 0) + (/[A-Z]/.test(p) ? 26 : 0) + (/\d/.test(p) ? 10 : 0) + (/[^a-zA-Z0-9]/.test(p) ? 33 : 0);
+    bits = p.length * Math.log2(Math.max(pool, 2));
+    if (/^(123|abc|qwe|senha|password|admin)/i.test(p) || /(.)\1{3,}/.test(p)) bits *= 0.5;
+    const score = bits < 35 ? 1 : bits < 55 ? 2 : bits < 75 ? 3 : 4;
+    return { score, bits: Math.round(bits), label: ['', 'Fraca', 'Razoável', 'Forte', 'Muito forte'][score], color: ['var(--line)', 'var(--bad)', 'var(--warn)', '#84cc16', 'var(--ok)'][score] };
+  };
 
   /* ---------- migração: copiar tudo de um backend para outro ---------- */
   S.copyTo = async (target, progress) => {
@@ -219,13 +246,20 @@
 
   const askPassword = async () => {
     const g = await gate(`<h2>Cofre protegido 🔒</h2><p class="muted">${S.backend.label} · seus dados estão criptografados.</p>
-      <form id="unlock"><input type="password" id="pw" placeholder="Sua senha" autocomplete="current-password" autofocus><button class="btn primary block mt">Desbloquear</button><p class="err" id="pw-err"></p></form>`);
+      <form id="unlock"><div class="pw-wrap"><input type="password" id="pw" placeholder="Senha-mestra" autocomplete="current-password" autofocus><button type="button" class="icon-btn" id="pw-eye" title="mostrar/ocultar">👁️</button></div>
+        ${S.vault.keyfile ? '<label class="drop mt" style="padding:12px"><input type="file" id="kf"><b id="kf-name">🔑 Escolher arquivo-chave</b><small>este cofre também exige o arquivo-chave</small></label>' : ''}
+        <button class="btn primary block mt">Desbloquear</button><p class="err" id="pw-err"></p></form>`);
     return new Promise((resolve) => {
       const f = g.querySelector('#unlock'); const pw = g.querySelector('#pw'); setTimeout(() => pw.focus(), 50);
+      g.querySelector('#pw-eye').onclick = () => { pw.type = pw.type === 'password' ? 'text' : 'password'; pw.focus(); };
+      const kf = g.querySelector('#kf'); if (kf) kf.onchange = () => { g.querySelector('#kf-name').textContent = '🔑 ' + (kf.files[0] ? kf.files[0].name : 'Escolher arquivo-chave'); };
       f.onsubmit = async (e) => {
-        e.preventDefault(); const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Verificando…';
-        const ok = await S.unlock(pw.value);
-        if (ok) { closeGate(); resolve(); } else { g.querySelector('#pw-err').textContent = 'Senha incorreta.'; btn.disabled = false; btn.textContent = 'Desbloquear'; pw.select(); }
+        e.preventDefault(); const btn = f.querySelector('button.primary');
+        if (kf && !kf.files[0]) { g.querySelector('#pw-err').textContent = 'Escolha o arquivo-chave.'; return; }
+        btn.disabled = true; btn.textContent = 'Verificando…';
+        const keyBytes = kf ? new Uint8Array(await kf.files[0].arrayBuffer()) : null;
+        const ok = await S.unlock(pw.value, keyBytes);
+        if (ok) { closeGate(); resolve(); } else { g.querySelector('#pw-err').textContent = kf ? 'Senha ou arquivo-chave incorretos.' : 'Senha incorreta.'; btn.disabled = false; btn.textContent = 'Desbloquear'; pw.select(); }
       };
     });
   };
