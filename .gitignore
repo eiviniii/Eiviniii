@@ -3,3 +3,5 @@ node_modules/
 # dados pessoais criados pelo programa portátil (ficam só no pendrive)
 dados/
 out.txt
+# pacotes gerados para download
+VidaOS-pendrive-*.zip
