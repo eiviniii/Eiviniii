@@ -7,6 +7,7 @@ window.App = window.App || {};
   'use strict';
 
   const STORE_KEY = 'vidaos.state.v1';
+  const KW_VERSION = 2; // aumente ao incluir palavras-chave novas nas categorias padrão
 
   /* ---------- utilidades ---------- */
   const U = {};
@@ -65,18 +66,18 @@ window.App = window.App || {};
   /* ---------- estado padrão ---------- */
   const C = (name, icon, color, keywords, budget = 0) => ({ id: U.norm(name).replace(/\W+/g, '-'), name, icon, color, keywords, budget });
   App.defaultCategories = () => [
-    C('Alimentação', '🍔', '#f97316', ['ifood', 'restaurante', 'lanchonete', 'padaria', 'burger', 'pizza', 'rappi', 'mcdonald', 'bk ', 'subway', 'acai', 'açaí', 'sorvete', 'cafe', 'café', 'bar e', 'churrasc', 'sushi', 'lanches', 'pastel', 'delivery', 'outback', 'habib', 'giraffas', 'coco bambu', 'starbucks', 'confeitaria']),
-    C('Mercado', '🛒', '#22c55e', ['supermerc', 'mercado ', 'mercadinho', 'atacad', 'assai', 'assaí', 'carrefour', 'pao de acucar', 'pão de açúcar', 'extra ', 'big ', 'condor', 'angeloni', 'muffato', 'sacolao', 'hortifruti', 'açougue', 'acougue', 'fort atacadista', 'makro', 'dia brasil', 'zaffari', 'savegnago']),
+    C('Alimentação', '🍔', '#f97316', ['chocolate', 'cacau show', 'kopenhagen', 'bodega', 'lanchonete', 'restaurant', 'grill', 'espetinho', 'hamburgu', 'cafeteria', 'doceria', 'sorveteria', 'ifood', 'restaurante', 'lanchonete', 'padaria', 'burger', 'pizza', 'rappi', 'mcdonald', 'bk ', 'subway', 'acai', 'açaí', 'sorvete', 'cafe', 'café', 'bar e', 'churrasc', 'sushi', 'lanches', 'pastel', 'delivery', 'outback', 'habib', 'giraffas', 'coco bambu', 'starbucks', 'confeitaria']),
+    C('Mercado', '🛒', '#22c55e', ['bistek', 'giassi', 'komprao', 'koch', 'cooper ', 'imperatriz', 'fort ', 'super ', 'mercearia', 'hiper', 'supermerc', 'mercado ', 'mercadinho', 'atacad', 'assai', 'assaí', 'carrefour', 'pao de acucar', 'pão de açúcar', 'extra ', 'big ', 'condor', 'angeloni', 'muffato', 'sacolao', 'hortifruti', 'açougue', 'acougue', 'fort atacadista', 'makro', 'dia brasil', 'zaffari', 'savegnago']),
     C('Farmácia', '💊', '#06b6d4', ['farmac', 'drogaria', 'drogasil', 'raia', 'pague menos', 'panvel', 'nissei', 'drogal', 'pacheco', 'sao joao', 'são joão', 'ultrafarma', 'drogao']),
     C('Saúde', '🩺', '#14b8a6', ['clinica', 'clínica', 'hospital', 'laborat', 'unimed', 'consulta', 'odonto', 'dentista', 'exame', 'amil', 'hapvida', 'psicolog', 'fisioter', 'nutricion']),
     C('Fitness', '🏋️', '#a855f7', ['academia', 'smart fit', 'smartfit', 'bluefit', 'bodytech', 'centauro', 'decathlon', 'growth', 'suplement', 'max titanium', 'integral medica', 'crossfit', 'gympass', 'wellhub', 'totalpass']),
-    C('Transporte', '🚗', '#eab308', ['uber', '99app', '99 ', 'posto', 'combust', 'shell', 'ipiranga', 'petrobras', 'br mania', 'estaciona', 'pedagio', 'pedágio', 'sem parar', 'conectcar', 'veloe', 'metro', 'metrô', 'onibus', 'ônibus', 'cabify', 'oficina', 'auto pecas', 'detran', 'ipva']),
+    C('Transporte', '🚗', '#eab308', ['park', 'estacionament', 'auto posto', 'posto ', 'zona azul', 'uber', '99app', '99 ', 'posto', 'combust', 'shell', 'ipiranga', 'petrobras', 'br mania', 'estaciona', 'pedagio', 'pedágio', 'sem parar', 'conectcar', 'veloe', 'metro', 'metrô', 'onibus', 'ônibus', 'cabify', 'oficina', 'auto pecas', 'detran', 'ipva']),
     C('Lazer', '🎉', '#ec4899', ['cinema', 'cinemark', 'ingresso', 'sympla', 'eventim', 'show', 'steam', 'playstation', 'xbox', 'nintendo', 'boliche', 'parque', 'teatro', 'balada', 'pub', 'cervejaria', 'tabacaria']),
     C('Assinaturas', '📺', '#8b5cf6', ['netflix', 'spotify', 'prime video', 'amazon prime', 'youtube', 'disney', 'hbo', 'max.com', 'globoplay', 'icloud', 'apple.com', 'google one', 'google storage', 'chatgpt', 'openai', 'claude', 'anthropic', 'deezer', 'paramount', 'crunchyroll', 'microsoft']),
     C('Casa & Contas', '🏠', '#3b82f6', ['energia', 'copel', 'cemig', 'enel', 'light ', 'celesc', 'coelba', 'sanepar', 'sabesp', 'copasa', 'agua', 'água', 'internet', 'vivo', 'claro', 'tim ', 'oi ', 'net ', 'aluguel', 'condominio', 'condomínio', 'gas ', 'gás', 'leroy', 'telhanorte', 'tok&stok', 'camicado']),
-    C('Educação', '📚', '#0ea5e9', ['curso', 'udemy', 'alura', 'estrategia', 'estratégia', 'gran ', 'grancursos', 'direcao concursos', 'qconcursos', 'livraria', 'apostila', 'faculdade', 'universidade', 'escola', 'cebraspe', 'vunesp', 'fgv', 'ibfc', 'idecan', 'aocp', 'inscricao', 'inscrição', 'kindle', 'amazon kindle']),
+    C('Educação', '📚', '#0ea5e9', ['hotmart', 'htm *', 'htm*', 'kiwify', 'eduzz', 'resumo', 'curso', 'udemy', 'alura', 'estrategia', 'estratégia', 'gran ', 'grancursos', 'direcao concursos', 'qconcursos', 'livraria', 'apostila', 'faculdade', 'universidade', 'escola', 'cebraspe', 'vunesp', 'fgv', 'ibfc', 'idecan', 'aocp', 'inscricao', 'inscrição', 'kindle', 'amazon kindle']),
     C('Vestuário', '👕', '#f43f5e', ['renner', 'riachuelo', 'c&a', 'cea ', 'shein', 'zara', 'nike', 'adidas', 'puma', 'hering', 'marisa', 'pernambucanas', 'netshoes', 'dafiti', 'olympikus', 'mizuno', 'track&field']),
-    C('Compras', '🛍️', '#f59e0b', ['amazon', 'mercado livre', 'mercadolivre', 'magalu', 'magazine luiza', 'shopee', 'aliexpress', 'americanas', 'casas bahia', 'kabum', 'temu', 'submarino', 'ponto frio']),
+    C('Compras', '🛍️', '#f59e0b', ['tiktok shop', 'tiktok', 'magic toy', 'brinquedo', 'loja', 'amazon', 'mercado livre', 'mercadolivre', 'magalu', 'magazine luiza', 'shopee', 'aliexpress', 'americanas', 'casas bahia', 'kabum', 'temu', 'submarino', 'ponto frio']),
     C('Pets', '🐾', '#84cc16', ['petz', 'cobasi', 'pet ', 'veterin', 'petshop', 'pet shop']),
     C('Viagem', '✈️', '#10b981', ['hotel', 'airbnb', 'booking', 'latam', 'gol ', 'azul ', 'decolar', '123milhas', 'passagem', 'rodoviaria', 'pousada', 'hostel']),
     C('Investimentos', '📈', '#22d3ee', ['xp invest', 'aplicacao', 'aplicação', 'rico ', 'clear corretora', 'nuinvest', 'btg', 'tesouro', 'cdb']),
@@ -161,7 +162,12 @@ window.App = window.App || {};
   App.load = (saved) => {
     App.state = deepMerge(App.defaultState(), saved || {});
     // garante abas/widgets novos ao atualizar o sistema
-    for (const c of App.defaultCategories()) if (!App.state.categories.find((x) => x.id === c.id)) App.state.categories.splice(Math.max(0, App.state.categories.length - 1), 0, c);
+    for (const c of App.defaultCategories()) {
+      const mine = App.state.categories.find((x) => x.id === c.id);
+      if (!mine) App.state.categories.splice(Math.max(0, App.state.categories.length - 1), 0, c);
+      else if ((App.state.settings.kwVersion || 1) < KW_VERSION) for (const k of c.keywords) if (!(mine.keywords || []).includes(k)) (mine.keywords = mine.keywords || []).push(k);
+    }
+    App.state.settings.kwVersion = KW_VERSION; // novas palavras-chave chegam uma vez só (as que você apagar não voltam)
     const s = App.state.settings;
     for (const [key, defs] of [['tabs', App.defaultTabs()], ['widgets', App.defaultWidgets()]]) {
       for (const t of defs) if (!s[key].find((x) => x.id === t.id)) s[key].splice(Math.max(0, s[key].length - (key === 'tabs' ? 1 : 0)), 0, t);

@@ -182,20 +182,34 @@
   };
 
   /** Fatura/extrato em PDF: procura linhas "data descrição valor". */
+  /** Junta números que alguns PDFs (ex.: XP) quebram com espaços: "12 / 09 / 26" → "12/09/26", "1 . 106 , 74" → "1.106,74". */
+  P.fixSpaced = (t) => String(t)
+    .replace(/R\s+\$/g, 'R$').replace(/U\s*S\s+\$/g, 'US$')
+    .replace(/\b(\d{1,2})\s+\/\s+(\d{1,2})(?:\s+\/\s+(\d{2,4}))?\b/g, (_, a, b, c) => `${a}/${b}${c ? '/' + c : ''}`)
+    .replace(/(\d)\s+\.\s+(?=\d{3}\b)/g, '$1.')
+    .replace(/(\d)\s+,\s+(\d{2})\b/g, '$1,$2')
+    .replace(/(^|\s)-\s+(?=\d)/g, '$1-');
+
   P.transactionsFromText = (text, ctx = {}) => {
     const year = ctx.year || new Date().getFullYear();
     const items = [];
-    const ignore = /(total|saldo|pagamento recebido|pagamento efetuado|limite|fatura anterior|encargos|juros|iof total|vencimento|resumo|credito rotativo)/;
-    for (const line of text.split('\n')) {
+    // palavras genéricas só contam no INÍCIO (senão "HTM*RESUMOCANTADO" seria ignorado)
+    const ignore = /(^(sub)?total|^saldo|^limite|^encargos|^juros|^iof|^vencimento|^resumo|^fatura anterior|pagamento recebido|pagamento efetuado|pagamentos? validos|pagamento de fatura|credito rotativo|pagamento minimo)/;
+    const AMT = '-?\\s?R?\\$?\\s?-?\\s?[\\d.]{1,12},\\d{2}';
+    const re = new RegExp(`^(\\d{1,2}[\\/.]\\d{1,2}(?:[\\/.]\\d{2,4})?|\\d{1,2}\\s+(?:de\\s+)?[A-Za-zçÇ]{3,9}\\.?)\\s+(.+?)\\s+(${AMT})(?:\\s+(?:US\\$\\s?)?(${AMT}))?\\s*(-|D|C)?$`);
+    for (const line of P.fixSpaced(text).split('\n')) {
       const l = line.trim();
-      const m = l.match(/^(\d{1,2}[\/.]\d{1,2}(?:[\/.]\d{2,4})?|\d{1,2}\s+(?:de\s+)?[A-Za-zçÇ]{3,9}\.?)\s+(.+?)\s+(-?\s?R?\$?\s?-?\s?[\d.]{1,9},\d{2})\s*(-|D|C)?$/);
+      const m = l.match(re);
       if (!m) continue;
-      const desc = m[2].replace(/\s+/g, ' ').trim();
-      if (ignore.test(U.norm(desc))) continue;
+      const desc = m[2].replace(/\s+/g, ' ').replace(/(\w) \. (?=\w)/g, '$1. ').replace(/[\s,;-]+$/, '').trim();
+      if (!desc || ignore.test(U.norm(desc))) continue;
+      if (!/[a-zA-ZÀ-ú]{2,}/.test(desc.replace(/US\$|R\$/g, ''))) continue; // linha só com valores (ex.: vencimento)
       const date = P.toISO(m[1].replace(/\s+de\s+/, ' '), year);
       if (!date) continue;
-      let raw = U.num(m[3].replace(/\s/g, ''));
-      if (/-/.test(m[3]) || m[4] === 'C') raw = -Math.abs(raw);
+      // 1ª coluna = R$; a 2ª (se houver) costuma ser US$ — usamos a de reais
+      let raw = U.num(m[3].replace(/[\sR$]/g, ''));
+      if (/-/.test(m[3]) || m[5] === 'C') raw = -Math.abs(raw);
+      if (!raw && m[4]) continue;
       items.push({ date, desc, raw });
     }
     return { items, positiveIsExpense: true };
@@ -257,6 +271,7 @@
   const RANGES = { weight: [25, 300], fat: [2, 70], fatMass: [1, 200], muscle: [8, 120], lean: [20, 200], water: [20, 85], visceral: [1, 59], bmr: [700, 4500], metaAge: [10, 99], bone: [0.5, 10], protein: [5, 40], subcut: [2, 70], waist: [40, 200], bmi: [10, 70] };
 
   P.bioFromText = (text) => {
+    text = P.fixSpaced(text);
     let t = U.norm(text).replace(/(\d),(\d)/g, '$1.$2');
     const out = {}, found = {};
     for (const [field, re] of BIO_RULES) {
@@ -335,6 +350,7 @@
   ];
 
   P.edital = (text) => {
+    text = P.fixSpaced(text);
     const lines = text.split('\n');
     const nlines = lines.map(U.norm);
     const year = (() => { const ys = (text.match(/20\d{2}/g) || []).map(Number).filter((y) => y >= 2020 && y <= 2035); if (!ys.length) return new Date().getFullYear(); const c = U.groupBy(ys, (y) => y); return +Object.keys(c).sort((a, b) => c[b].length - c[a].length)[0]; })();
