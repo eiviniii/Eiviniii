@@ -11,19 +11,20 @@ package main
 import (
 	"crypto/rand"
 	"embed"
-	"io/fs"
-	"mime"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
+	"mime"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -33,7 +34,7 @@ import (
 	"time"
 )
 
-const version = "1.2.0"
+const version = "2.0.0"
 
 // Cópia interna do aplicativo: se algum arquivo sumir do pendrive
 // (antivírus, extração incompleta…), o programa serve a cópia daqui.
@@ -43,18 +44,17 @@ var embedded embed.FS
 
 var (
 	baseDir, appDir, dataDir, filesDir, backupDir string
-	token                                          string
-	idRe                                           = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,100}$`)
-	allowedData                                    = map[string]bool{"estado.json": true, "cofre.json": true}
-	writeMu                                        sync.Mutex
-	lastPing                                       = time.Now()
-	gotPing                                        bool
-	pingMu                                         sync.Mutex
-	quitCh                                         = make(chan string, 4)
-	lastBackup                                     time.Time
-	useEmbedded                                    bool   // arquivos da pasta são de outra versão → usa a cópia interna
-	filesInfo                                      string // para mostrar em Ajustes
-	verRe                                          = regexp.MustCompile(`App\.VERSION = '([^']+)'`)
+	token                                         string
+	idRe                                          = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,100}$`)
+	allowedData                                   = map[string]bool{"estado.json": true, "cofre.json": true}
+	writeMu                                       sync.Mutex
+	lastPing                                      = time.Now()
+	gotPing                                       bool
+	pingMu                                        sync.Mutex
+	quitCh                                        = make(chan string, 4)
+	lastBackup                                    time.Time
+	filesInfo                                     string // para mostrar em Ajustes
+	verRe                                         = regexp.MustCompile(`App\.VERSION = '([^']+)'`)
 )
 
 func main() {
@@ -65,7 +65,7 @@ func main() {
 		_ = mime.AddExtensionType(ext, t)
 	}
 	noBrowser := flag.Bool("no-browser", false, "não abrir o navegador (apenas imprime o endereço)")
-	port := flag.Int("port", 47615, "porta local preferida")
+	port := flag.Int("port", 47720, "porta local preferida")
 	dir := flag.String("dir", "", "pasta do aplicativo (padrão: pasta do executável)")
 	flag.Parse()
 
@@ -77,10 +77,10 @@ func main() {
 	if *dir != "" {
 		baseDir, _ = filepath.Abs(*dir)
 	}
-	appDir = findApp(baseDir)
-	if appDir == "" {
-		// sem os arquivos ao lado: roda só com a cópia interna, dados ao lado do programa
-		appDir = baseDir
+	// O aplicativo inteiro vem embutido neste executável; no pendrive só fica a pasta "dados".
+	appDir = baseDir
+	if inTemp(baseDir) {
+		fatal("Parece que o Vida OS foi aberto de dentro do arquivo .zip (pasta temporária do Windows).\n\nAssim seus dados seriam perdidos ao fechar.\n\nExtraia primeiro: abra o .zip, arraste a pasta VidaOS para o pendrive e abra o VidaOS-Windows.exe que está no pendrive.")
 	}
 	dataDir = filepath.Join(appDir, "dados")
 	filesDir = filepath.Join(dataDir, "arquivos")
@@ -120,22 +120,10 @@ func main() {
 
 	// Os arquivos da pasta são da mesma versão deste programa? Se não (pasta antiga,
 	// extração em outro lugar, arquivo faltando), usa a cópia interna — sempre a certa.
-	embVer, diskVer := "", ""
 	if b, err := embedded.ReadFile("app/js/core.js"); err == nil {
 		if m := verRe.FindSubmatch(b); m != nil {
-			embVer = string(m[1])
+			filesInfo = "embutido " + string(m[1])
 		}
-	}
-	if b, err := os.ReadFile(filepath.Join(appDir, "js", "core.js")); err == nil {
-		if m := verRe.FindSubmatch(b); m != nil {
-			diskVer = string(m[1])
-		}
-	}
-	useEmbedded = embVer != "" && diskVer != embVer
-	if useEmbedded {
-		filesInfo = "cópia interna " + embVer + " (pasta tinha " + map[bool]string{true: "nenhuma", false: diskVer}[diskVer == ""] + ")"
-	} else {
-		filesInfo = "pasta " + diskVer
 	}
 	log.Printf("arquivos: %s", filesInfo)
 
@@ -263,46 +251,33 @@ func routes() http.Handler {
 		serveBlob(w, r, filepath.Join(filesDir, id), false)
 	})
 	// arquivos do aplicativo (nunca a pasta dados nem os executáveis)
-	sub, _ := fs.Sub(embedded, "app")
-	diskFS := http.FileServer(http.Dir(appDir))
+	sub, err := fs.Sub(embedded, "app")
+	if err != nil {
+		panic(err)
+	}
 	embFS := http.FileServer(http.FS(sub))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		p := strings.ToLower(filepath.ToSlash(filepath.Clean("/" + r.URL.Path)))
-		first := strings.SplitN(strings.TrimPrefix(p, "/"), "/", 2)[0]
-		if first == "dados" || strings.HasPrefix(first, ".") || first == "portatil" || strings.HasPrefix(first, "vidaos-") {
-			http.NotFound(w, r)
-			return
-		}
-		if p == "/" || p == "/index.html" {
-			// ServeContent não redireciona (o FileServer mandaria /index.html → / em loop)
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			if f, err := os.Open(filepath.Join(appDir, "index.html")); err == nil && !useEmbedded {
-				defer f.Close()
-				st, _ := f.Stat()
-				http.ServeContent(w, r, "index.html", st.ModTime(), f)
-				return
-			}
+		clean := path.Clean("/" + r.URL.Path)
+		rel := strings.TrimPrefix(clean, "/")
+		if rel == "" || rel == "index.html" {
 			b, err := fs.ReadFile(sub, "index.html")
 			if err != nil {
-				http.NotFound(w, r)
+				problemPage(w, "o aplicativo embutido está incompleto ("+err.Error()+")")
 				return
 			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			_, _ = w.Write(b)
 			return
 		}
-		rel := filepath.FromSlash(strings.TrimPrefix(filepath.ToSlash(filepath.Clean("/"+r.URL.Path)), "/"))
-		if st, err := os.Stat(filepath.Join(appDir, rel)); err == nil && !st.IsDir() && st.Size() > 0 && !useEmbedded {
-			diskFS.ServeHTTP(w, r)
-			return
-		}
-		if _, err := fs.Stat(sub, filepath.ToSlash(rel)); err == nil {
-			if !useEmbedded {
-				log.Printf("arquivo ausente no pendrive, usando cópia interna: %s", r.URL.Path)
-			}
+		if st, err := fs.Stat(sub, rel); err == nil && !st.IsDir() {
 			embFS.ServeHTTP(w, r)
 			return
 		}
 		log.Printf("não encontrado: %s", r.URL.Path)
+		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+			http.Redirect(w, r, "/index.html", http.StatusFound) // navegação para endereço estranho → volta ao início
+			return
+		}
 		http.NotFound(w, r)
 	})
 	return mux
@@ -487,15 +462,18 @@ func existingSession() string {
 
 /* ---------------- util ---------------- */
 
-func findApp(base string) string {
-	for _, d := range []string{base, filepath.Join(base, "app"), filepath.Join(base, "VidaOS"), filepath.Dir(base)} {
-		if _, err := os.Stat(filepath.Join(d, "index.html")); err == nil {
-			if _, err := os.Stat(filepath.Join(d, "js", "core.js")); err == nil {
-				return d
-			}
-		}
-	}
-	return ""
+// inTemp: executável rodando de pasta temporária (ex.: aberto direto de dentro do .zip)
+func inTemp(dir string) bool {
+	t := strings.ToLower(filepath.Clean(os.TempDir()))
+	d := strings.ToLower(filepath.Clean(dir))
+	return runtime.GOOS == "windows" && (strings.HasPrefix(d, t) || strings.Contains(d, `\temp\`) || strings.Contains(d, "temp1_"))
+}
+
+func problemPage(w http.ResponseWriter, msg string) {
+	log.Printf("problema: %s", msg)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(500)
+	fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><title>Vida OS</title><body style="font-family:system-ui;background:#0b0d14;color:#e8eaf2;display:grid;place-items:center;height:100vh;margin:0"><div style="max-width:520px;padding:24px;border-radius:16px;background:#161a26"><h2>Vida OS não conseguiu abrir</h2><p>%s</p><p>Baixe o pacote novamente e substitua o VidaOS-Windows.exe. Detalhes em <code>dados/log.txt</code>.</p><small>programa %s</small></div>`, msg, version)
 }
 
 func touch() {

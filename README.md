@@ -6,13 +6,12 @@ Funciona direto no navegador (computador ou celular), **sem servidor e sem login
 ## Como abrir
 
 ### 💾 No pendrive (recomendado — nada fica no computador)
-1. Baixe o projeto (botão **Code → Download ZIP**) e extraia **a pasta inteira** dentro do pendrive.
-2. Abra o programa da pasta:
-   - **Windows:** `VidaOS-Windows.exe`
-   - **Mac:** `VidaOS-Mac` (Apple M1/M2/M3…) ou `VidaOS-Mac-Intel` — na 1ª vez: botão direito → **Abrir**.
-   - **Linux:** `VidaOS-Linux`
-3. Ele abre o Vida OS numa janela própria. **Tudo é gravado na pasta `dados` do pendrive** — inclusive o perfil do navegador. Fechou a janela, o programa encerra sozinho; no outro computador está tudo lá, como você deixou.
-4. Antes de tirar o pendrive, use **⏏️ Sair com segurança** (canto inferior esquerdo).
+1. Copie **só o programa** para uma pasta no pendrive (ex.: `E:\VidaOS\`):
+   - **Windows:** `VidaOS-Windows.exe` · **Mac:** `VidaOS-Mac` (M1/M2/M3…) ou `VidaOS-Mac-Intel` · **Linux:** `VidaOS-Linux`
+   - O sistema inteiro já vem **dentro** do programa. Não precisa de mais nenhum arquivo.
+2. Dois cliques nele. Ele abre o Vida OS numa janela própria e cria a pasta **`dados`** ao lado — é lá que fica tudo (inclusive o perfil do navegador). Fechou a janela, o programa encerra sozinho.
+3. Antes de tirar o pendrive, use **⏏️ Sair com segurança**.
+4. Para atualizar: substitua só o programa. A pasta `dados` continua.
 
 Extras do modo pendrive:
 - **Cofre no estilo KeePassXC** (Ajustes → Armazenamento & segurança):
@@ -20,7 +19,6 @@ Extras do modo pendrive:
   - criptografia **AES‑256‑GCM** de todos os dados e PDFs; chave derivada com **PBKDF2‑SHA256, 600 mil iterações**;
   - bloqueio automático por inatividade e **ao minimizar a janela**.
   - ⚠️ Não existe "esqueci a senha": sem a senha (e o arquivo-chave, se usar), os dados não podem ser recuperados.
-- **À prova de arquivo faltando:** o programa leva uma cópia interna do sistema. Se o antivírus bloquear ou faltar algum arquivo da pasta, ele usa a cópia interna (dá até para rodar só com o `.exe`).
 - **Cópias de segurança automáticas** em `dados/backups` (a cada 15 min de uso, guarda as 40 últimas).
 - O programa usa o Edge/Chrome/Brave que já existe no computador (só como "motor", com perfil no pendrive). Se quiser zero dependência, coloque um Chrome portátil em `navegador/` dentro da pasta.
 
