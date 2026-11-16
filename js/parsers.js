@@ -23,7 +23,19 @@
   P.pdfText = async (file) => {
     if (!window.pdfjsLib) throw new Error('Leitor de PDF não carregou.');
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let pdf;
+    try { pdf = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise; }
+    catch (e) {
+      if (!/worker/i.test(e.message || '')) throw e;
+      // o "worker" do leitor não carregou (arquivo bloqueado/ausente): tenta outras fontes
+      console.warn('pdf worker falhou, tentando alternativas', e);
+      let ok = false;
+      for (const src of ['vendor/pdf.worker.min.js?r=' + Date.now(), 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js']) {
+        try { await App.loadScript(src); if (window.pdfjsWorker) { ok = true; break; } } catch (x) { /* próxima */ }
+      }
+      if (!ok) throw new Error('O componente que lê PDF (vendor/pdf.worker.min.js) foi bloqueado ou está faltando — geralmente é o antivírus. Abra pelo VidaOS-Windows.exe atualizado ou restaure esse arquivo da quarentena.');
+      pdf = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
+    }
     const lines = [];
     for (let p = 1; p <= pdf.numPages; p++) {
       const page = await pdf.getPage(p);

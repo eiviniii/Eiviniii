@@ -20,6 +20,7 @@ Extras do modo pendrive:
   - criptografia **AES‑256‑GCM** de todos os dados e PDFs; chave derivada com **PBKDF2‑SHA256, 600 mil iterações**;
   - bloqueio automático por inatividade e **ao minimizar a janela**.
   - ⚠️ Não existe "esqueci a senha": sem a senha (e o arquivo-chave, se usar), os dados não podem ser recuperados.
+- **À prova de arquivo faltando:** o programa leva uma cópia interna do sistema. Se o antivírus bloquear ou faltar algum arquivo da pasta, ele usa a cópia interna (dá até para rodar só com o `.exe`).
 - **Cópias de segurança automáticas** em `dados/backups` (a cada 15 min de uso, guarda as 40 últimas).
 - O programa usa o Edge/Chrome/Brave que já existe no computador (só como "motor", com perfil no pendrive). Se quiser zero dependência, coloque um Chrome portátil em `navegador/` dentro da pasta.
 

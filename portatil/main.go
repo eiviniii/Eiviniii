@@ -10,6 +10,9 @@ package main
 
 import (
 	"crypto/rand"
+	"embed"
+	"io/fs"
+	"mime"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -30,7 +33,13 @@ import (
 	"time"
 )
 
-const version = "1.0.0"
+const version = "1.1.0"
+
+// Cópia interna do aplicativo: se algum arquivo sumir do pendrive
+// (antivírus, extração incompleta…), o programa serve a cópia daqui.
+//
+//go:embed all:app
+var embedded embed.FS
 
 var (
 	baseDir, appDir, dataDir, filesDir, backupDir string
@@ -46,6 +55,12 @@ var (
 )
 
 func main() {
+	// O Windows pode informar tipos errados para .js/.css (registro do sistema);
+	// fixamos os tipos para o navegador nunca recusar os scripts.
+	for ext, t := range map[string]string{".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
+		".html": "text/html; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json", ".wasm": "application/wasm"} {
+		_ = mime.AddExtensionType(ext, t)
+	}
 	noBrowser := flag.Bool("no-browser", false, "não abrir o navegador (apenas imprime o endereço)")
 	port := flag.Int("port", 47615, "porta local preferida")
 	dir := flag.String("dir", "", "pasta do aplicativo (padrão: pasta do executável)")
@@ -61,7 +76,8 @@ func main() {
 	}
 	appDir = findApp(baseDir)
 	if appDir == "" {
-		fatal("Não encontrei o index.html do Vida OS.\n\nDeixe este programa na mesma pasta do index.html (a pasta do Vida OS no pendrive).")
+		// sem os arquivos ao lado: roda só com a cópia interna, dados ao lado do programa
+		appDir = baseDir
 	}
 	dataDir = filepath.Join(appDir, "dados")
 	filesDir = filepath.Join(dataDir, "arquivos")
@@ -223,7 +239,9 @@ func routes() http.Handler {
 		serveBlob(w, r, filepath.Join(filesDir, id), false)
 	})
 	// arquivos do aplicativo (nunca a pasta dados nem os executáveis)
-	fs := http.FileServer(http.Dir(appDir))
+	sub, _ := fs.Sub(embedded, "app")
+	diskFS := http.FileServer(http.Dir(appDir))
+	embFS := http.FileServer(http.FS(sub))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		p := strings.ToLower(filepath.ToSlash(filepath.Clean("/" + r.URL.Path)))
 		first := strings.SplitN(strings.TrimPrefix(p, "/"), "/", 2)[0]
@@ -233,18 +251,33 @@ func routes() http.Handler {
 		}
 		if p == "/" || p == "/index.html" {
 			// ServeContent não redireciona (o FileServer mandaria /index.html → / em loop)
-			f, err := os.Open(filepath.Join(appDir, "index.html"))
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			if f, err := os.Open(filepath.Join(appDir, "index.html")); err == nil {
+				defer f.Close()
+				st, _ := f.Stat()
+				http.ServeContent(w, r, "index.html", st.ModTime(), f)
+				return
+			}
+			b, err := fs.ReadFile(sub, "index.html")
 			if err != nil {
 				http.NotFound(w, r)
 				return
 			}
-			defer f.Close()
-			st, _ := f.Stat()
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.ServeContent(w, r, "index.html", st.ModTime(), f)
+			_, _ = w.Write(b)
 			return
 		}
-		fs.ServeHTTP(w, r)
+		rel := filepath.FromSlash(strings.TrimPrefix(filepath.ToSlash(filepath.Clean("/"+r.URL.Path)), "/"))
+		if st, err := os.Stat(filepath.Join(appDir, rel)); err == nil && !st.IsDir() && st.Size() > 0 {
+			diskFS.ServeHTTP(w, r)
+			return
+		}
+		if _, err := fs.Stat(sub, filepath.ToSlash(rel)); err == nil {
+			log.Printf("arquivo ausente no pendrive, usando cópia interna: %s", r.URL.Path)
+			embFS.ServeHTTP(w, r)
+			return
+		}
+		log.Printf("não encontrado: %s", r.URL.Path)
+		http.NotFound(w, r)
 	})
 	return mux
 }
