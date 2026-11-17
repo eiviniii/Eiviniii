@@ -3,7 +3,7 @@
    Tudo fica salvo no seu navegador (localStorage + IndexedDB).
    ========================================================== */
 window.App = window.App || {};
-window.App.VERSION = '2026.11.17-2'; // o programa portátil compara isto com a cópia interna
+window.App.VERSION = '2026.11.17-3'; // o programa portátil compara isto com a cópia interna
 (function (App) {
   'use strict';
 

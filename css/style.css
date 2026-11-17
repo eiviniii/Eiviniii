@@ -545,3 +545,4 @@ code { background: var(--card2); padding: 1px 6px; border-radius: 6px; font-size
 
 /* compras */
 .sh-sec { margin: 14px 0 4px; font-size: .9rem; color: var(--muted); }
+.kml { font-size: 1.05rem; color: var(--ok); white-space: nowrap; } .kml small { font-size: .7rem; color: var(--muted); }

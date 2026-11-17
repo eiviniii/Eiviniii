@@ -60,7 +60,7 @@ CNH, RG, CPF, certidões, reservista, comprovantes… Anexe frente/verso (foto o
 - **Conquistas:** XP, níveis e 22 medalhas (treinos, estudo, hábitos, peso, mês no azul, reserva, metas, documentos…).
 
 ### 🚗 Veículo
-Km atual, manutenções com intervalo por km e por tempo (óleo, filtros, pneus, correia, freios, bateria…) avisando o que vence, **IPVA, licenciamento e seguro** na Agenda, abastecimentos com **consumo (km/L)** e o **custo do carro por mês** (inclui os gastos de posto das faturas).
+Km atual, manutenções com intervalo por km e por tempo (óleo, filtros, pneus, correia, freios, bateria…) avisando o que vence, **IPVA, licenciamento e seguro** na Agenda, abastecimentos com **consumo real** (km rodados ÷ litros: km/L, R$/km, gasto a cada 100 km, por combustível), **etanol × gasolina pelo consumo real do seu carro**, **calculadora de custo de viagem** e o **custo do carro por mês** (inclui os gastos de posto das faturas).
 
 ### 🕐 Relógio e 🌤️ clima
 Relógio em tela cheia (hora, minuto, segundo, data, clima e próximos compromissos) que **mantém a tela acesa**. Previsão do tempo da sua cidade (Open-Meteo, grátis): agora, por hora e 7 dias, com chuva, UV, nascer/pôr do sol e dicas do dia.
