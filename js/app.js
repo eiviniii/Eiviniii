@@ -44,6 +44,7 @@
     App.Inv.snapshot();
     document.getElementById('privacy-btn').onclick = () => { App.state.settings.privacy = !App.state.settings.privacy; App.save(); App.applyTheme(); };
     document.getElementById('quit-btn').onclick = App.safeExit;
+    document.getElementById('clock-btn').onclick = () => App.Clock.open();
     document.getElementById('lock-btn').onclick = async () => { await App.storage.flush(); App.storage.lock(); };
     setupSearch(); setupQuick(); reminders(); autoLock();
     if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !App.storage.backend.token) navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -82,6 +83,8 @@
       s.subjects.filter((x) => has(x.name, x.notes)).forEach((x) => out.push({ i: '📚', t: x.name, s: 'matéria', go: 'estudos/materias' }));
       s.concursos.filter((c) => has(c.name, c.banca, c.cargo)).forEach((c) => out.push({ i: '📝', t: c.name, s: 'concurso', go: 'estudos/concursos' }));
       s.plan.forEach((p) => p.items.filter((x) => has(x.name)).forEach((x) => out.push({ i: '🏋️', t: x.name, s: `treino de ${U.DAYS[p.day]}`, go: 'fitness/treino' })));
+      (s.docs || []).filter((d) => has(d.title, d.number, d.issuer, d.notes, d.person, App.Docs.cat(d.category).label, (d.tags || []).join(' '))).slice(0, 8).forEach((d) => out.unshift({ i: App.Docs.cat(d.category).icon, t: d.title, s: ['documento', d.person !== 'Eu' && d.person, d.number].filter(Boolean).join(' · '), doc: d.id }));
+      (s.tasks || []).filter((t) => !t.done && has(t.title, t.notes)).slice(0, 5).forEach((t) => out.push({ i: '✅', t: t.title, s: 'tarefa' + (t.due ? ' · ' + U.dateBR(t.due) : ''), go: 'rotina' }));
       s.fiis.filter((f) => has(f.ticker)).forEach((f) => out.push({ i: '🏢', t: f.ticker, s: `${f.qty} cotas`, go: 'investimentos/fiis' }));
       return out;
     };
@@ -105,7 +108,7 @@
     box.addEventListener('mousedown', (e) => {
       const a = e.target.closest('[data-k]'); if (!a) return; e.preventDefault();
       const r = results[+a.dataset.k];
-      if (r.url) App.Sites.open(r.site); else if (r.file) App.files.open(r.file); else App.go(r.go);
+      if (r.doc) App.Docs.open(r.doc); else if (r.url) App.Sites.open(r.site); else if (r.file) App.files.open(r.file); else App.go(r.go);
       box.classList.remove('open'); inp.blur();
     });
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && results[0]) { box.querySelector('[data-k="0"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); } });
@@ -122,6 +125,7 @@
       const items = [
         ['💸', 'Gasto', () => App.views.financas.quick.tx()], ['🔁', 'Parcelamento', () => App.views.financas.quick.inst()],
         ['📅', 'Evento / conta', () => App.views.agenda.quick.event()], ['📚', 'Sessão de estudo', () => App.views.estudos.quick.study()],
+        ['📁', 'Documento', () => App.views.documentos.quick.doc()], ['✅', 'Tarefa', () => App.views.rotina.quick.task()],
         ['📄', 'PDF na biblioteca', () => App.views.estudos.quick.lib()], ['🔗', 'Site útil', () => App.views.sites.quick.site()],
         ['⚖️', 'Medição corporal', () => { App.go('fitness/corpo'); setTimeout(() => App.views.fitness.quick.body(), 60); }], ['🏋️', 'Registrar treino', () => App.views.fitness.quick.workout()],
         ['🏢', 'FII', () => App.views.investimentos.quick.fii()], ['⬆', 'Subir fatura', () => App.go('financas/importar')],

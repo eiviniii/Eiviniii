@@ -70,6 +70,9 @@
   };
 
   W.atalhos = () => App.Sites.widget();
+  W.clima = () => App.Weather.widget();
+  W.tarefas = () => App.Rotina.widget();
+  W.documentos = () => App.Docs.widget();
   W.notas = () => `<div class="card"><header><h3>📝 Notas rápidas</h3><small class="muted">salva sozinho</small></header><textarea rows="7" data-input="dashNotes" placeholder="Ideias, lembretes, coisas para não esquecer…">${U.esc(st().notes)}</textarea></div>`;
   W.investir = () => App.Planner.widget();
 
@@ -86,6 +89,7 @@
         <div class="grid g3">${ws.map((w) => W[w.id]()).join('')}</div>`;
     },
     mount() {
+      App.Weather.fillWidget();
       const c6 = document.getElementById('dash-6m');
       if (c6) { const ms = Array.from({ length: 6 }, (_, i) => U.addMonthsYM(U.ym(), i - 5)); App.chart(c6, { type: 'bar', data: { labels: ms.map(U.ymShort), datasets: [{ label: 'Gastos', data: ms.map(App.Fin.monthExpenses), backgroundColor: App.cssVar('--accent'), borderRadius: 6 }, { label: 'Receitas', data: ms.map(App.Fin.monthIncome), backgroundColor: App.alpha('#22c55e', .7), borderRadius: 6 }] }, options: { plugins: { tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${U.moneyTxt(c.raw)}` } } } } }); }
       const ents = App.Fit.entries().filter((e) => e.weight).slice(-20);

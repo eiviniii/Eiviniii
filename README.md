@@ -47,6 +47,15 @@ Abra o `index.html` (ou publique no GitHub Pages: Settings → Pages). Nesse mod
 - **Renda fixa:** CDB/LCI/LCA/Tesouro/caixinha com % do CDI, prefixado ou IPCA+ → valor bruto, **IR regressivo** e líquido estimados.
 - **Patrimônio** por classe e instituição (XP, Nubank…), evolução mês a mês, registro de proventos e **simulador de renda passiva** (bola de neve com reinvestimento).
 
+### 📁 Documentos
+CNH, RG, CPF, certidões, reservista, comprovantes… Anexe frente/verso (foto ou PDF), com número, órgão, validade, categoria e de quem é (você ou família). Busca e filtros, botão de copiar o número, miniaturas, visualizador com zoom/giro, **aviso de vencimento** (também na Agenda e no Início) e lista de **documentos essenciais** que ainda faltam. No pendrive com senha, tudo fica criptografado.
+
+### ✅ Rotina
+Tarefas com prioridade e prazo (aparecem na Agenda) e hábitos diários com sequência de dias.
+
+### 🕐 Relógio e 🌤️ clima
+Relógio em tela cheia (hora, minuto, segundo, data, clima e próximos compromissos) que **mantém a tela acesa**. Previsão do tempo da sua cidade (Open-Meteo, grátis): agora, por hora e 7 dias, com chuva, UV, nascer/pôr do sol e dicas do dia.
+
 ### 🔗 Sites úteis
 Atalhos com logo, descrição e etiquetas — pesquise "remover fundo", "juntar pdf", "extrair texto"… Contato de WhatsApp direto, mais de 50 sugestões prontas e atalhos fixados no painel inicial. Aparecem também na busca geral (Ctrl+K).
 

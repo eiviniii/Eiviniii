@@ -16,6 +16,8 @@
     taf: { label: 'TAF / teste físico', icon: '🏃', color: '#22c55e' },
     exame: { label: 'Exame médico', icon: '🩺', color: '#14b8a6' },
     revisao: { label: 'Revisão de estudo', icon: '🔁', color: '#a855f7' },
+    documento: { label: 'Documento vence', icon: '📁', color: '#0ea5e9' },
+    tarefa: { label: 'Tarefa', icon: '✅', color: '#22c55e' },
     aniversario: { label: 'Aniversário', icon: '🎂', color: '#eab308' },
     outro: { label: 'Outro', icon: '•', color: '#64748b' },
   };
@@ -50,6 +52,9 @@
         out.push({ id: paidKey, key: paidKey, virtual: true, title: `Fatura ${c.name}`, type: 'fatura', date, value: v, paid: (st().settings.paidFaturas || []).includes(paidKey), notes: v ? 'valor = parcelas conhecidas do mês (sem gastos avulsos)' : '' });
       }
     }
+    // validade de documentos e prazos de tarefas
+    for (const d of st().docs || []) if (d.expiry && d.expiry >= from && d.expiry <= to) out.push({ id: 'doc|' + d.id, key: 'doc|' + d.id, virtual: true, title: `Vence: ${d.title}${d.person && d.person !== 'Eu' ? ' (' + d.person + ')' : ''}`, type: 'documento', date: d.expiry, done: false });
+    for (const t of st().tasks || []) if (t.due && !t.done && t.due >= from && t.due <= to) out.push({ id: 'task|' + t.id, key: 'task|' + t.id, virtual: true, title: t.title, type: 'tarefa', date: t.due, done: false });
     return out.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
   };
   A.upcoming = (days = 30) => A.occurrences(U.today(), U.addDays(U.today(), days));
@@ -77,6 +82,8 @@
 
   const toggleDone = (key) => {
     const [id, date] = key.split('|');
+    if (id === 'task') { const t = (st().tasks || []).find((x) => x.id === date); if (t) { t.done = true; t.doneAt = new Date().toISOString(); } return; }
+    if (id === 'doc') return;
     if (id === 'fatura') { const s = st().settings; s.paidFaturas = s.paidFaturas || []; const i = s.paidFaturas.indexOf(key); i >= 0 ? s.paidFaturas.splice(i, 1) : s.paidFaturas.push(key); return; }
     const e = st().events.find((x) => x.id === id); if (!e) return;
     let nowPaid;
@@ -100,7 +107,7 @@
       <div class="ico" style="background:${App.alpha(t.color, .18)}">${t.icon}</div>
       <div class="grow"><div class="t">${U.esc(o.title)}</div><div class="s">${U.dateNice(o.date)}${o.time ? ' · ' + o.time : ''} · ${U.relDays(o.date)} ${late ? '<span class="chip bad">atrasada</span>' : ''}${o.link ? ` · <a href="${U.esc(o.link)}" target="_blank" rel="noopener">link ↗</a>` : ''}</div></div>
       ${o.value ? `<b>${U.money(o.value)}</b>` : ''}
-      ${opts.noToggle ? '' : `<button class="icon-btn" data-act="agDone" data-k="${U.esc(o.key)}" title="${payable ? 'marcar como pago' : 'concluído'}">${o.done ? '✅' : '⬜'}</button>`}
+      ${opts.noToggle || o.type === 'documento' ? '' : `<button class="icon-btn" data-act="agDone" data-k="${U.esc(o.key)}" title="${payable ? 'marcar como pago' : 'concluído'}">${o.done ? '✅' : '⬜'}</button>`}
       ${o.virtual || opts.noEdit ? '' : `<button class="icon-btn" data-act="agEdit" data-id="${o.id}">✏️</button>`}
     </div>`;
   };

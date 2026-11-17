@@ -3,7 +3,7 @@
    Tudo fica salvo no seu navegador (localStorage + IndexedDB).
    ========================================================== */
 window.App = window.App || {};
-window.App.VERSION = '2026.11.16-4'; // o programa portátil compara isto com a cópia interna
+window.App.VERSION = '2026.11.17-1'; // o programa portátil compara isto com a cópia interna
 (function (App) {
   'use strict';
 
@@ -90,16 +90,20 @@ window.App.VERSION = '2026.11.16-4'; // o programa portátil compara isto com a 
 
   App.defaultTabs = () => [
     { id: 'inicio', label: 'Início', icon: '🏠', visible: true },
+    { id: 'rotina', label: 'Rotina', icon: '✅', visible: true },
     { id: 'financas', label: 'Finanças', icon: '💰', visible: true },
     { id: 'investimentos', label: 'Investimentos', icon: '📈', visible: true },
     { id: 'estudos', label: 'Estudos', icon: '📚', visible: true },
     { id: 'fitness', label: 'Fitness', icon: '💪', visible: true },
     { id: 'agenda', label: 'Agenda', icon: '📅', visible: true },
+    { id: 'documentos', label: 'Documentos', icon: '📁', visible: true },
     { id: 'sites', label: 'Sites úteis', icon: '🔗', visible: true },
     { id: 'ajustes', label: 'Ajustes', icon: '⚙️', visible: true },
   ];
 
   App.defaultWidgets = () => [
+    { id: 'clima', label: 'Clima', visible: true },
+    { id: 'tarefas', label: 'Tarefas e hábitos', visible: true },
     { id: 'resumo', label: 'Resumo do mês', visible: true },
     { id: 'atalhos', label: 'Atalhos (sites)', visible: true },
     { id: 'agenda', label: 'Próximos compromissos', visible: true },
@@ -110,6 +114,7 @@ window.App.VERSION = '2026.11.16-4'; // o programa portátil compara isto com a 
     { id: 'concursos', label: 'Contagem para provas', visible: true },
     { id: 'patrimonio', label: 'Patrimônio', visible: true },
     { id: 'investir', label: 'Meta de investimento do mês', visible: true },
+    { id: 'documentos', label: 'Documentos (validade)', visible: true },
     { id: 'notas', label: 'Notas rápidas', visible: true },
   ];
 
@@ -143,6 +148,10 @@ window.App.VERSION = '2026.11.16-4'; // o programa portátil compara isto com a 
     body: [],
     events: [],
     sites: [],
+    docs: [],
+    tasks: [],
+    habits: [],
+    weather: { city: '', lat: null, lon: null, cache: null },
     accounts: [],
     rules: [],
     goals: [],

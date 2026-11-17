@@ -58,6 +58,10 @@
         <p class="muted"><small>Crie uma conta grátis em <a href="https://brapi.dev" target="_blank" rel="noopener">brapi.dev</a> → Dashboard → copie o token. Ele fica salvo só no seu navegador.</small></p>
         ${F.row(F.number('Pomodoro: minutos de foco', 'pomodoro', s.pomodoro), F.number('Minutos de pausa', 'pause', s.pause))}
         <button class="btn primary">Salvar</button></form></div>
+      <div class="card"><header><h3>🌤️ Clima e relógio</h3></header>
+        <p>Cidade da previsão: <b>${U.esc((st().weather || {}).city || 'não definida')}</b></p>
+        <div class="row"><button class="btn" data-act="wxSetup">🌍 Escolher cidade</button><button class="btn" data-act="clock">🕐 Abrir relógio</button></div>
+        <p class="muted"><small>No relógio: ⛶ tela cheia, 12/24h e segundos. A tela fica acesa enquanto ele estiver aberto. Atalho: botão 🕐 no topo.</small></p></div>
       <div class="card"><header><h3>🔔 Notificações</h3></header>
         <p class="muted">Ao abrir o sistema, avisa contas que vencem hoje/amanhã, provas e o fim do Pomodoro.</p>
         ${F.check('Ativar lembretes', 'notify', s.notify).replace('name="notify"', 'data-change="notifyToggle"')}
