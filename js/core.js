@@ -3,7 +3,7 @@
    Tudo fica salvo no seu navegador (localStorage + IndexedDB).
    ========================================================== */
 window.App = window.App || {};
-window.App.VERSION = '2026.11.17-1'; // o programa portátil compara isto com a cópia interna
+window.App.VERSION = '2026.11.17-2'; // o programa portátil compara isto com a cópia interna
 (function (App) {
   'use strict';
 
@@ -97,6 +97,7 @@ window.App.VERSION = '2026.11.17-1'; // o programa portátil compara isto com a 
     { id: 'fitness', label: 'Fitness', icon: '💪', visible: true },
     { id: 'agenda', label: 'Agenda', icon: '📅', visible: true },
     { id: 'documentos', label: 'Documentos', icon: '📁', visible: true },
+    { id: 'veiculo', label: 'Veículo', icon: '🚗', visible: true },
     { id: 'sites', label: 'Sites úteis', icon: '🔗', visible: true },
     { id: 'ajustes', label: 'Ajustes', icon: '⚙️', visible: true },
   ];
@@ -115,6 +116,7 @@ window.App.VERSION = '2026.11.17-1'; // o programa portátil compara isto com a 
     { id: 'patrimonio', label: 'Patrimônio', visible: true },
     { id: 'investir', label: 'Meta de investimento do mês', visible: true },
     { id: 'documentos', label: 'Documentos (validade)', visible: true },
+    { id: 'veiculo', label: 'Veículo (manutenção)', visible: true },
     { id: 'notas', label: 'Notas rápidas', visible: true },
   ];
 
@@ -188,7 +190,7 @@ window.App.VERSION = '2026.11.17-1'; // o programa portátil compara isto com a 
     if (now) return App.storage.flush();
     App.storage.scheduleSave();
   };
-  App.commit = (fn) => { fn && fn(App.state); App.save(); App.rerender(); };
+  App.commit = (fn) => { fn && fn(App.state); App.save(); App.rerender(); App.Achv && App.Achv.check(); };
 
   /* ---------- arquivos (navegador ou pendrive — ver storage.js) ---------- */
   App.files = {

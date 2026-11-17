@@ -248,9 +248,11 @@
     const g = await gate(`<h2>Cofre protegido 🔒</h2><p class="muted">${S.backend.label} · seus dados estão criptografados.</p>
       <form id="unlock"><div class="pw-wrap"><input type="password" id="pw" placeholder="Senha-mestra" autocomplete="current-password" autofocus><button type="button" class="icon-btn" id="pw-eye" title="mostrar/ocultar">👁️</button></div>
         ${S.vault.keyfile ? '<label class="drop mt" style="padding:12px"><input type="file" id="kf"><b id="kf-name">🔑 Escolher arquivo-chave</b><small>este cofre também exige o arquivo-chave</small></label>' : ''}
-        <button class="btn primary block mt">Desbloquear</button><p class="err" id="pw-err"></p></form>`);
+        <button class="btn primary block mt">Desbloquear</button><p class="err" id="pw-err"></p></form>
+      <button type="button" class="btn block mt em-lock-btn" id="em-btn" style="display:none">🆘 Ficha de emergência</button>`);
     return new Promise((resolve) => {
       const f = g.querySelector('#unlock'); const pw = g.querySelector('#pw'); setTimeout(() => pw.focus(), 50);
+      S.backend.read('emergencia.json').then((u8) => { if (!u8) return; const data = JSON.parse(td.decode(u8)); const b = g.querySelector('#em-btn'); b.style.display = ''; b.onclick = () => App.Emergency.full(data.card, data.prof || {}); }).catch(() => {});
       g.querySelector('#pw-eye').onclick = () => { pw.type = pw.type === 'password' ? 'text' : 'password'; pw.focus(); };
       const kf = g.querySelector('#kf'); if (kf) kf.onchange = () => { g.querySelector('#kf-name').textContent = '🔑 ' + (kf.files[0] ? kf.files[0].name : 'Escolher arquivo-chave'); };
       f.onsubmit = async (e) => {

@@ -125,7 +125,7 @@
       const items = [
         ['💸', 'Gasto', () => App.views.financas.quick.tx()], ['🔁', 'Parcelamento', () => App.views.financas.quick.inst()],
         ['📅', 'Evento / conta', () => App.views.agenda.quick.event()], ['📚', 'Sessão de estudo', () => App.views.estudos.quick.study()],
-        ['📁', 'Documento', () => App.views.documentos.quick.doc()], ['✅', 'Tarefa', () => App.views.rotina.quick.task()],
+        ['📁', 'Documento', () => App.views.documentos.quick.doc()], ['⛽', 'Abastecimento', () => App.views.veiculo.quick.fuel()], ['🛒', 'Lista de compras', () => App.go('rotina/compras')], ['✅', 'Tarefa', () => App.views.rotina.quick.task()],
         ['📄', 'PDF na biblioteca', () => App.views.estudos.quick.lib()], ['🔗', 'Site útil', () => App.views.sites.quick.site()],
         ['⚖️', 'Medição corporal', () => { App.go('fitness/corpo'); setTimeout(() => App.views.fitness.quick.body(), 60); }], ['🏋️', 'Registrar treino', () => App.views.fitness.quick.workout()],
         ['🏢', 'FII', () => App.views.investimentos.quick.fii()], ['⬆', 'Subir fatura', () => App.go('financas/importar')],

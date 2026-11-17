@@ -35,6 +35,7 @@ Abra o `index.html` (ou publique no GitHub Pages: Settings → Pages). Nesse mod
 - **Contas & saldo:** cadastre suas contas (Nubank, Itaú…) e o **salário como receita fixa** — ele entra sozinho todo mês. Cada gasto lançado já desconta e mostra **quanto você tem agora** e a **previsão para o fim do mês**. Pagar uma conta na agenda também desconta do saldo.
 - **Orçamento & metas:** veja para onde vai o salário (contas fixas, parcelas, metas, investimento, gastos variáveis) e **quanto sobra**. Metas (ex.: casamento R$ 10 mil): informe quanto guarda por mês *ou* a data, e ele calcula quando chega — a meta vira um "gasto fixo" até ser atingida.
 - **Sem duplicar:** ao subir a fatura, qualquer item com **mesmo dia e mesmo valor** de algo que você já lançou é ignorado (mesmo com nome diferente).
+- **Assinaturas:** detecta sozinho as cobranças que se repetem todo mês (Netflix, academia, planos…) com total mensal e anual.
 - **Oportunidades e alertas:** projeção do mês, categorias acima da média, assinaturas, delivery, receita × despesa e mapa de gastos por dia.
 - **Parcelas & dívidas:** cadastre a compra (parcela + nº de parcelas, ou o total). O sistema mostra a parcela do mês (ex.: 4/10), quantas faltam, quanto falta pagar, a soma de cada mês até quitar tudo e **em que mês você fica livre das parcelas**.
 - **Subir relatório do mês:** CSV (Nubank, Inter, C6…), OFX, Excel ou PDF de fatura. Ele **categoriza sozinho** (comida, mercado, farmácia, lazer…), ignora duplicados e pagamentos, e **detecta compras parceladas** ("Parcela 3/10") para criar o parcelamento automaticamente.
@@ -48,10 +49,18 @@ Abra o `index.html` (ou publique no GitHub Pages: Settings → Pages). Nesse mod
 - **Patrimônio** por classe e instituição (XP, Nubank…), evolução mês a mês, registro de proventos e **simulador de renda passiva** (bola de neve com reinvestimento).
 
 ### 📁 Documentos
-CNH, RG, CPF, certidões, reservista, comprovantes… Anexe frente/verso (foto ou PDF), com número, órgão, validade, categoria e de quem é (você ou família). Busca e filtros, botão de copiar o número, miniaturas, visualizador com zoom/giro, **aviso de vencimento** (também na Agenda e no Início) e lista de **documentos essenciais** que ainda faltam. No pendrive com senha, tudo fica criptografado.
+CNH, RG, CPF, certidões, reservista, comprovantes… Anexe frente/verso (foto ou PDF), com número, órgão, validade, categoria e de quem é (você ou família).
+- **Garantias & notas fiscais:** guarde a NF com o prazo de garantia; avisa antes de acabar.
+- **🆘 Ficha de emergência:** tipo sanguíneo, alergias, remédios, plano de saúde e contatos (ligar/WhatsApp). Pode aparecer na **tela de bloqueio** do cofre para quem te socorrer — só a ficha, o resto continua criptografado.
+ Busca e filtros, botão de copiar o número, miniaturas, visualizador com zoom/giro, **aviso de vencimento** (também na Agenda e no Início) e lista de **documentos essenciais** que ainda faltam. No pendrive com senha, tudo fica criptografado.
 
 ### ✅ Rotina
-Tarefas com prioridade e prazo (aparecem na Agenda) e hábitos diários com sequência de dias.
+- Tarefas com prioridade e prazo (aparecem na Agenda) e hábitos diários com sequência de dias.
+- **Lista de compras** por seção do mercado, com **histórico de preços** (último, menor e onde), "compra de sempre" e "finalizar compra" que lança o gasto.
+- **Conquistas:** XP, níveis e 22 medalhas (treinos, estudo, hábitos, peso, mês no azul, reserva, metas, documentos…).
+
+### 🚗 Veículo
+Km atual, manutenções com intervalo por km e por tempo (óleo, filtros, pneus, correia, freios, bateria…) avisando o que vence, **IPVA, licenciamento e seguro** na Agenda, abastecimentos com **consumo (km/L)** e o **custo do carro por mês** (inclui os gastos de posto das faturas).
 
 ### 🕐 Relógio e 🌤️ clima
 Relógio em tela cheia (hora, minuto, segundo, data, clima e próximos compromissos) que **mantém a tela acesa**. Previsão do tempo da sua cidade (Open-Meteo, grátis): agora, por hora e 7 dias, com chuva, UV, nascer/pôr do sol e dicas do dia.

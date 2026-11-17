@@ -73,6 +73,7 @@
   W.clima = () => App.Weather.widget();
   W.tarefas = () => App.Rotina.widget();
   W.documentos = () => App.Docs.widget();
+  W.veiculo = () => App.Vehicle.widget();
   W.notas = () => `<div class="card"><header><h3>📝 Notas rápidas</h3><small class="muted">salva sozinho</small></header><textarea rows="7" data-input="dashNotes" placeholder="Ideias, lembretes, coisas para não esquecer…">${U.esc(st().notes)}</textarea></div>`;
   W.investir = () => App.Planner.widget();
 
@@ -82,7 +83,7 @@
       const ws = st().settings.widgets.filter((w) => w.visible && W[w.id]);
       const firstRun = !name && !st().transactions.length && !st().body.length;
       return `<div class="page-head"><div><h1>${greet()}${name ? ', ' + U.esc(name.split(' ')[0]) : ''} 👋</h1><p>${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).replace(/^./, (c) => c.toUpperCase())}</p></div>
-        <div class="actions"><a class="btn ghost" href="#/ajustes/painel">🧩 Personalizar painel</a></div></div>
+        <div class="actions">${App.Achv.widget()}<a class="btn ghost" href="#/ajustes/painel">🧩 Personalizar painel</a></div></div>
         ${firstRun ? `<div class="card accent" style="margin-bottom:16px"><h2>Bem-vindo ao seu Vida OS ✨</h2><p>Comece por aqui:</p>
           <div class="row"><a class="btn" style="background:#fff;color:#111" href="#/fitness/perfil">1. Seu perfil</a><a class="btn" style="background:#fff;color:#111" href="#/financas/importar">2. Subir fatura</a><a class="btn" style="background:#fff;color:#111" href="#/financas/parcelas">3. Parcelas</a><a class="btn" style="background:#fff;color:#111" href="#/investimentos/fiis">4. FIIs</a><a class="btn" style="background:#fff;color:#111" href="#/ajustes">5. Personalizar</a></div>
           <p style="margin-bottom:0"><small>Seus dados ficam só neste navegador. Faça backup em Ajustes de vez em quando.</small></p></div>` : ''}

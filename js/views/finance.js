@@ -476,6 +476,7 @@
   }
 
   views.contas = () => App.Money.viewContas();
+  views.assinaturas = () => App.Subs.view();
   views.metas = () => App.Money.viewMetas();
 
   /* ---------- view ---------- */
@@ -485,7 +486,7 @@
       const sub = views[r.sub] ? r.sub : 'visao';
       this._sub = sub;
       return `<div class="page-head"><div><h1>💰 Finanças</h1><p>Gastos, parcelas, relatórios e orçamento — tudo num lugar só.</p></div></div>
-        ${App.subtabs('financas', [['visao', 'Visão geral'], ['contas', 'Contas & saldo'], ['metas', 'Orçamento & metas'], ['parcelas', 'Parcelas & dívidas'], ['gastos', 'Gastos'], ['importar', 'Subir relatório'], ['categorias', 'Categorias & orçamento'], ['cartoes', 'Cartões']], sub)}
+        ${App.subtabs('financas', [['visao', 'Visão geral'], ['contas', 'Contas & saldo'], ['metas', 'Orçamento & metas'], ['parcelas', 'Parcelas & dívidas'], ['gastos', 'Gastos'], ['importar', 'Subir relatório'], ['categorias', 'Categorias & orçamento'], ['assinaturas', '🔁 Assinaturas'], ['cartoes', 'Cartões']], sub)}
         ${views[sub]()}`;
     },
     mount(el) {
@@ -502,6 +503,7 @@
     },
     actions: {
       ...App.Money.actions,
+      ...App.Subs.actions,
       ymPrev: () => { S.ym = U.addMonthsYM(S.ym, -1); App.rerender(); },
       ymNext: () => { S.ym = U.addMonthsYM(S.ym, 1); App.rerender(); },
       ymNow: () => { S.ym = U.ym(); App.rerender(); },

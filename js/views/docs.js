@@ -88,13 +88,12 @@
         ${ex ? `<span class="chip ${ex.cls}">${ex.txt}</span>` : ''}</div></div>`;
   };
 
-  const render = () => {
+  const renderDocs = () => {
     const rows = filtered(), all = list();
     const mine = all.filter((d) => (d.person || 'Eu') === 'Eu').map((d) => ' ' + U.norm(d.title) + ' ');
     const missing = D.ESSENTIALS.filter(([, , keys]) => !mine.some((t) => keys.some((k) => t.includes(k))));
     const exp = D.expiring();
-    return `<div class="page-head"><div><h1>📁 Documentos</h1><p>Seus documentos originais sempre à mão — para achar na hora do aperto.</p></div>
-      <div class="actions"><button class="btn primary" data-act="docAdd">＋ Documento</button></div></div>
+    return `<div class="row" style="justify-content:flex-end;margin:-6px 0 14px"><button class="btn primary" data-act="docAdd">＋ Documento</button></div>
       ${exp.length ? `<div class="card" style="border-color:var(--warn);margin-bottom:16px"><header><h3>⏰ Atenção à validade</h3></header><div class="list">${exp.map((d) => { const e = D.expiry(d); return `<div class="li" data-act="docView" data-id="${d.id}" style="cursor:pointer"><div class="ico">${D.cat(d.category).icon}</div><div class="grow"><div class="t">${U.esc(d.title)}</div><div class="s">validade ${U.dateBR(d.expiry)}</div></div><span class="chip ${e.cls}">${e.txt}</span></div>`; }).join('')}</div></div>` : ''}
       <div class="card"><div class="filters" style="margin:0">
         <input id="doc-q" placeholder="🔎 Buscar: CNH, reservista, número, órgão…" value="${U.esc(S.q)}" data-input="docQ" style="flex:1;min-width:220px">
@@ -194,10 +193,18 @@
   App.globalActions.docOpenFromDash = (t, e) => { e.preventDefault(); const d = list().find((x) => x.id === t.dataset.id); if (d) viewer(d); };
   D.open = (id) => { const d = list().find((x) => x.id === id); if (d) viewer(d); };
 
+  const render = (r) => {
+    const sub = { docs: renderDocs, garantias: App.Warranty.view, emergencia: App.Emergency.view }[r.sub] ? r.sub : 'docs';
+    const fn = { docs: renderDocs, garantias: App.Warranty.view, emergencia: App.Emergency.view }[sub];
+    return `<div class="page-head"><div><h1>📁 Documentos</h1><p>Seus documentos, notas fiscais e ficha de emergência — para achar na hora do aperto.</p></div></div>
+      ${App.subtabs('documentos', [['docs', '🪪 Documentos'], ['garantias', '🧾 Garantias & notas'], ['emergencia', '🆘 Ficha de emergência']], sub)}${fn()}`;
+  };
+
   App.views.documentos = {
     render,
     mount(el) { fillThumbs(el); const q = document.getElementById('doc-q'); if (q && S.q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } },
     actions: {
+      ...App.Emergency.actions,
       docAdd: () => docModal(), docAddSug: (t) => docModal({}, { title: t.dataset.t, category: t.dataset.c }),
       docView: (t, e) => { if (e.target.closest('[data-act=docCopy]')) return; D.open(t.dataset.id); },
       docCopy: (t, e) => { e.stopPropagation(); copyNum(list().find((x) => x.id === t.dataset.id)); },

@@ -46,7 +46,7 @@ var (
 	baseDir, appDir, dataDir, filesDir, backupDir string
 	token                                         string
 	idRe                                          = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,100}$`)
-	allowedData                                   = map[string]bool{"estado.json": true, "cofre.json": true}
+	allowedData                                   = map[string]bool{"estado.json": true, "cofre.json": true, "emergencia.json": true}
 	writeMu                                       sync.Mutex
 	lastPing                                      = time.Now()
 	gotPing                                       bool

@@ -17,14 +17,12 @@
   const taskRow = (t) => `<div class="task ${t.done ? 'done' : ''}"><button class="tick" data-act="tkDone" data-id="${t.id}" style="border-color:${PRI[t.pri || 'media'].c}">${t.done ? '✓' : ''}</button>
     <div class="grow"><div class="t">${U.esc(t.title)}</div>${t.notes ? `<div class="s">${U.esc(t.notes)}</div>` : ''}</div>${dueChip(t)}<span class="dot" title="prioridade ${PRI[t.pri || 'media'].l}" style="background:${PRI[t.pri || 'media'].c}"></span><button class="icon-btn" data-act="tkEdit" data-id="${t.id}">✏️</button></div>`;
 
-  R.view = () => {
+  R.viewTasks = () => {
     const open = R.open(), done = tasks().filter((t) => t.done).sort((a, b) => String(b.doneAt).localeCompare(String(a.doneAt))).slice(0, 15);
     const days = Array.from({ length: 7 }, (_, i) => U.addDays(U.today(), i - 6));
     const today = U.today();
     const doneToday = habits().filter((h) => (h.log || {})[today]).length;
-    return `<div class="page-head"><div><h1>✅ Rotina</h1><p>Tarefas do dia e hábitos — o que precisa ser feito, num lugar só.</p></div>
-      <div class="actions"><button class="btn" data-act="clock">🕐 Relógio tela cheia</button></div></div>
-    <div class="grid g3">
+    return `<div class="grid g3">
       <div class="card span2"><header><h3>📝 Tarefas</h3><small class="muted">${open.length} pendente(s)</small></header>
         <form data-submit="tkQuick" class="inline-form" style="margin-bottom:12px">
           <input name="title" placeholder="O que precisa fazer? (Enter para adicionar)" style="flex:1;min-width:200px" autocomplete="off">
@@ -69,11 +67,18 @@
     tkQuick: (form) => { const d = App.formData(form); if (!d.title || !d.title.trim()) return; App.commit((s) => { s.tasks = s.tasks || []; s.tasks.push({ id: U.uid(), title: d.title.trim(), pri: d.pri || 'media', due: d.due || '', createdAt: U.today() }); }); const i = document.querySelector('[data-submit=tkQuick] [name=title]'); if (i) i.focus(); },
     tkDone: (t) => App.commit(() => { const x = tasks().find((y) => y.id === t.dataset.id); x.done = !x.done; x.doneAt = x.done ? new Date().toISOString() : null; }),
     tkEdit: (t) => taskModal(tasks().find((y) => y.id === t.dataset.id)),
-    tkClear: () => App.commit((s) => { s.tasks = s.tasks.filter((x) => !x.done); }),
+    tkClear: () => App.commit((s) => { s.tasksDoneCount = (s.tasksDoneCount || 0) + s.tasks.filter((x) => x.done).length; s.tasks = s.tasks.filter((x) => !x.done); }),
     hbAdd: () => habitModal(), hbEdit: (t) => habitModal(habits().find((h) => h.id === t.dataset.id)),
     hbTick: (t) => App.commit(() => { const h = habits().find((x) => x.id === t.dataset.id); h.log = h.log || {}; if (h.log[t.dataset.d]) delete h.log[t.dataset.d]; else h.log[t.dataset.d] = 1; }),
     hbSuggest: () => App.commit((s) => { s.habits = [['💧', 'Beber 2L de água', '#0ea5e9'], ['📚', 'Estudar', '#7c5cff'], ['🏃', 'Treinar', '#22c55e'], ['📖', 'Ler 20 minutos', '#f59e0b'], ['😴', 'Dormir 7h+', '#64748b']].map(([icon, name, color]) => ({ id: U.uid(), icon, name, color, log: {} })); }),
   };
   Object.assign(App.globalActions, actions); // funcionam também no Início
-  App.views.rotina = { render: R.view, actions, quick: { task: () => taskModal() } };
+  R.view = (r) => {
+    const subs = { tarefas: R.viewTasks, compras: App.Shop.view, conquistas: App.Achv.view };
+    const sub = subs[r.sub] ? r.sub : 'tarefas';
+    return `<div class="page-head"><div><h1>✅ Rotina</h1><p>Tarefas, hábitos, compras e suas conquistas.</p></div>
+      <div class="actions">${App.Achv.widget()}<button class="btn" data-act="clock">🕐 Relógio</button></div></div>
+      ${App.subtabs('rotina', [['tarefas', '📝 Tarefas & hábitos'], ['compras', '🛒 Lista de compras'], ['conquistas', '🏆 Conquistas']], sub)}${subs[sub]()}`;
+  };
+  App.views.rotina = { render: R.view, actions: { ...actions, ...App.Shop.actions }, quick: { task: () => taskModal() } };
 })(window.App);
