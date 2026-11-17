@@ -84,6 +84,11 @@
           <li><b>Gravar direto numa pasta</b> (Chrome/Edge): ${S.folderSupported() ? '<button class="btn sm primary" data-act="toFolder">📂 Escolher pasta no pendrive e mover dados</button>' : '<i>não suportado neste navegador</i>'}</li>
         </ol>` : ''}
     </div>
+    ${b.kind === 'pendrive' && !(S.info && S.info.remote) ? `<div class="card"><header><h3>📱 Usar no celular (mesma Wi-Fi)</h3><span class="chip" id="lan-chip">desligado</span></header>
+      <p class="muted">Com o Vida OS aberto aqui no PC, o celular conectado na <b>mesma Wi-Fi</b> acessa tudo pelo navegador — lança gastos, marca treino, vê documentos. Nada fica salvo no celular: os dados continuam só no pendrive.</p>
+      <div id="lan-box"></div><button class="btn primary" id="lan-btn" data-act="lanToggle">📱 Ligar acesso pelo celular</button>
+      <p class="muted mt"><small>Na 1ª vez o Windows pode perguntar se permite o acesso à rede: escolha <b>Redes privadas</b>. O link tem uma chave secreta — só quem escanear o QR entra (e, com senha no cofre, ainda precisa da senha). Desligue quando terminar.</small></p></div>` : ''}
+    ${S.info && S.info.remote ? '<div class="card"><header><h3>📱 Você está no celular</h3></header><p class="muted">Conectado ao Vida OS do computador pela Wi-Fi. As mudanças são gravadas direto no pendrive do PC e aparecem lá em segundos.</p></div>' : ''}
     <div class="card"><header><h3>🔒 Senha e criptografia</h3>${S.vault ? '<span class="chip ok">ativada</span>' : '<span class="chip">desativada</span>'}</header>
       ${remote ? (S.vault ? `<p class="muted">Seus dados e PDFs estão <b>criptografados (AES‑256)</b>, no mesmo modelo do KeePassXC: sem a senha${App.storage.vault && App.storage.vault.keyfile ? ' e o arquivo-chave' : ''}, ninguém lê o conteúdo do pendrive.</p>
           <div class="row"><button class="btn" data-act="pwChange">🔑 Trocar senha</button><button class="btn" data-act="lockNow">🔒 Bloquear agora</button><button class="btn ghost danger" data-act="pwRemove">Remover senha</button></div>
@@ -136,6 +141,17 @@
     function seg(f, i) { f.querySelectorAll('.seg > *').forEach((x, j) => x.classList.toggle('on', i === j)); }
   };
 
+  async function paintLan() {
+    const box = document.getElementById('lan-box'); if (!box) return;
+    let r; try { r = await App.storage.backend.lan('GET'); } catch (e) { return; }
+    document.getElementById('lan-chip').textContent = r.on ? 'ligado' : 'desligado'; document.getElementById('lan-chip').className = 'chip ' + (r.on ? 'ok' : '');
+    document.getElementById('lan-btn').textContent = r.on ? '⏹ Desligar acesso pelo celular' : '📱 Ligar acesso pelo celular';
+    if (!r.on || !r.urls || !r.urls.length) { box.innerHTML = ''; return; }
+    const qr = (u) => { try { const q = qrcode(0, 'M'); q.addData(u); q.make(); return q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }); } catch (e) { return ''; } };
+    box.innerHTML = `<div class="lan-qr">${qr(r.urls[0])}</div><p style="text-align:center"><b>Aponte a câmera do celular para o QR Code</b></p>
+      ${r.urls.map((u) => `<p class="muted" style="text-align:center;word-break:break-all"><small>${U.esc(u.split('?')[0])}</small></p>`).join('')}`;
+  }
+
   async function exportBackup(withFiles) {
     const data = { app: 'vida-os', exportedAt: new Date().toISOString(), state: st() };
     if (withFiles) {
@@ -166,6 +182,7 @@
         ${App.subtabs('ajustes', [['aparencia', 'Aparência'], ['abas', 'Abas'], ['painel', 'Painel inicial'], ['preferencias', 'Preferências'], ['armazenamento', '💾 Armazenamento & segurança']], sub)}${views[sub]()}`;
     },
     async mount() {
+      if (document.getElementById('lan-box')) paintLan();
       const host = document.getElementById('av-prev');
       if (host) { const ents = App.Fit.entries(); const e = ents.length ? App.Fit.enrich(ents[ents.length - 1]) : { weight: 0 }; App.Body.create(host, { view: 'both' }).to(App.Body.params(e, st().profile), null, 0); }
     },
@@ -185,6 +202,11 @@
       savePrefs: (form) => { const d = App.formData(form); apply((s) => Object.assign(s, d)); App.toast('Preferências salvas'); },
       notifyToggle: async (t) => { if (t.checked && 'Notification' in window && Notification.permission !== 'granted') await Notification.requestPermission(); apply((s) => { s.notify = t.checked; }); },
       safeExit: () => App.safeExit(),
+      lanToggle: async () => {
+        const b = App.storage.backend; const st0 = await b.lan('GET');
+        try { const r = await b.lan(st0 && st0.on ? 'DELETE' : 'POST'); App.toast(r.on ? '📱 Acesso pelo celular ligado' : 'Acesso pelo celular desligado'); } catch (e) { App.toast('Não consegui ligar: ' + e.message, 'error'); }
+        paintLan();
+      },
       lockNow: async () => { await App.storage.flush(); App.storage.lock(); },
       pwSet: () => pwModal('Criar senha do cofre', (p, prog, kf) => App.storage.setPassword(p, prog, kf).then(() => App.toast('🔒 Cofre criado. Seus dados agora estão criptografados.'))),
       pwChange: () => pwModal('Trocar senha / arquivo-chave', (p, prog, kf) => App.storage.setPassword(p, prog, kf).then(() => App.toast('Senha trocada.'))),

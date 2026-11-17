@@ -382,19 +382,22 @@
   /* ---------- view ---------- */
   App.views.fitness = {
     render(r) {
-      const sub = { corpo: viewCorpo, evolucao: viewEvolucao, treino: viewTreino, registro: viewRegistro, progresso: viewProgresso, perfil: viewPerfil }[r.sub] ? r.sub : 'corpo';
+      const VIEWS = { corpo: viewCorpo, evolucao: viewEvolucao, treino: viewTreino, registro: viewRegistro, progresso: viewProgresso, remedios: App.Health.viewMeds, sono: App.Health.viewSleep, perfil: viewPerfil };
+      const sub = VIEWS[r.sub] ? r.sub : 'corpo';
       this._sub = sub;
-      const fn = { corpo: viewCorpo, evolucao: viewEvolucao, treino: viewTreino, registro: viewRegistro, progresso: viewProgresso, perfil: viewPerfil }[sub];
+      const fn = VIEWS[sub];
       return `<div class="page-head"><div><h1>💪 Fitness</h1><p>Composição corporal, plano de treino, corrida e evolução.</p></div></div>
-        ${App.subtabs('fitness', [['corpo', 'Corpo'], ['evolucao', 'Evolução'], ['treino', 'Plano de treino'], ['registro', 'Registrar treino'], ['progresso', 'Cargas & corrida'], ['perfil', 'Perfil & cálculos']], sub)}${fn()}`;
+        ${App.subtabs('fitness', [['corpo', 'Corpo'], ['evolucao', 'Evolução'], ['treino', 'Plano de treino'], ['registro', 'Registrar treino'], ['progresso', 'Cargas & corrida'], ['remedios', '💊 Remédios & suplementos'], ['sono', '😴 Sono & humor'], ['perfil', 'Perfil & cálculos']], sub)}${fn()}`;
     },
     mount(el) {
       playing = 0;
       if (this._sub === 'corpo') mountCorpo(el);
       if (this._sub === 'evolucao') mountEvolucao();
       if (this._sub === 'progresso') mountProgresso();
+      if (this._sub === 'sono') App.Health.mountSleep();
     },
     actions: {
+      ...App.Health.actions,
       ghost: (t) => { S.ghost = t.checked; scrubTo(S.idx); },
       scrub: (t) => scrubTo(+t.value),
       avView: (t) => { lastParams = null; App.commit((x) => { x.settings.avatarView = t.dataset.v; }); },

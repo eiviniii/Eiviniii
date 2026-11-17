@@ -74,7 +74,9 @@
   W.tarefas = () => App.Rotina.widget();
   W.documentos = () => App.Docs.widget();
   W.veiculo = () => App.Vehicle.widget();
-  W.notas = () => `<div class="card"><header><h3>📝 Notas rápidas</h3><small class="muted">salva sozinho</small></header><textarea rows="7" data-input="dashNotes" placeholder="Ideias, lembretes, coisas para não esquecer…">${U.esc(st().notes)}</textarea></div>`;
+  W.saude = () => App.Score.card();
+  W.remedios = () => { const ds = App.Health.dosesOf(U.today()); if (!ds.length) return ''; return `<div class="card"><header><h3>💊 Hoje</h3><a class="btn sm ghost" href="#/fitness/remedios">abrir</a></header>${ds.map((d) => `<div class="task ${d.taken ? 'done' : ''}"><button class="tick" data-act="mdTake" data-id="${d.m.id}" data-k="${d.key}">${d.taken ? '✓' : ''}</button><div class="grow"><div class="t">${U.esc(d.m.name)}</div></div><span class="chip">${d.time}</span></div>`).join('')}</div>`; };
+  W.notas = () => App.Notes.widget();
   W.investir = () => App.Planner.widget();
 
   App.views.inicio = {
@@ -98,7 +100,8 @@
       if (c && ents.length) App.chart(c, { type: 'line', data: { labels: ents.map((e) => U.dateBR(e.date).slice(0, 5)), datasets: [{ data: ents.map((e) => e.weight), borderColor: App.cssVar('--accent'), backgroundColor: App.alpha(App.cssVar('--accent'), .15), fill: true, tension: .35, pointRadius: 2 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
     },
     actions: {
-      dashNotes: U.debounce((t) => { st().notes = t.value; App.save(); }, 400),
+      dashNotes: U.debounce((t) => { const q = App.Notes.quick(); q.body = t.value; q.updated = new Date().toISOString(); st().notes = t.value; App.save(); }, 400),
+      mdTake: (t) => App.Health.actions.mdTake(t),
       agDone: (t) => App.commit(() => App.Agenda.toggleDone(t.dataset.k)),
       agEdit: (t) => App.Agenda.eventModal(st().events.find((e) => e.id === t.dataset.id)),
     },

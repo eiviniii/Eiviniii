@@ -3,7 +3,7 @@
    Tudo fica salvo no seu navegador (localStorage + IndexedDB).
    ========================================================== */
 window.App = window.App || {};
-window.App.VERSION = '2026.11.17-3'; // o programa portátil compara isto com a cópia interna
+window.App.VERSION = '2026.11.17-4'; // o programa portátil compara isto com a cópia interna
 (function (App) {
   'use strict';
 
@@ -98,6 +98,8 @@ window.App.VERSION = '2026.11.17-3'; // o programa portátil compara isto com a 
     { id: 'agenda', label: 'Agenda', icon: '📅', visible: true },
     { id: 'documentos', label: 'Documentos', icon: '📁', visible: true },
     { id: 'veiculo', label: 'Veículo', icon: '🚗', visible: true },
+    { id: 'viagens', label: 'Viagens', icon: '✈️', visible: true },
+    { id: 'notas', label: 'Caderno', icon: '🗒️', visible: true },
     { id: 'sites', label: 'Sites úteis', icon: '🔗', visible: true },
     { id: 'ajustes', label: 'Ajustes', icon: '⚙️', visible: true },
   ];
@@ -106,6 +108,8 @@ window.App.VERSION = '2026.11.17-3'; // o programa portátil compara isto com a 
     { id: 'clima', label: 'Clima', visible: true },
     { id: 'tarefas', label: 'Tarefas e hábitos', visible: true },
     { id: 'resumo', label: 'Resumo do mês', visible: true },
+    { id: 'saude', label: 'Saúde financeira (nota)', visible: true },
+    { id: 'remedios', label: 'Remédios de hoje', visible: true },
     { id: 'atalhos', label: 'Atalhos (sites)', visible: true },
     { id: 'agenda', label: 'Próximos compromissos', visible: true },
     { id: 'treino', label: 'Treino de hoje', visible: true },

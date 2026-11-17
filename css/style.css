@@ -546,3 +546,56 @@ code { background: var(--card2); padding: 1px 6px; border-radius: 6px; font-size
 /* compras */
 .sh-sec { margin: 14px 0 4px; font-size: .9rem; color: var(--muted); }
 .kml { font-size: 1.05rem; color: var(--ok); white-space: nowrap; } .kml small { font-size: .7rem; color: var(--muted); }
+
+/* sub-abas quebram linha quando são muitas */
+.subtabs { flex-wrap: wrap; overflow: visible; }
+@media (max-width: 900px) { .subtabs { flex-wrap: nowrap; overflow-x: auto; } }
+
+/* nota de saúde financeira */
+.score-wrap { display: flex; gap: 18px; align-items: center; }
+.score-wrap .grow { flex: 1; min-width: 0; }
+.score-ring { width: 130px; height: 130px; position: relative; flex-shrink: 0; }
+.score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.score-ring circle { fill: none; stroke-width: 10; transition: stroke-dashoffset .8s; }
+.score-ring > div { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; text-align: center; }
+.score-ring b { font-size: 2.2rem; line-height: 1; } .score-ring small { color: var(--muted); font-size: .75rem; }
+.tip { padding: 8px 12px; border-radius: 10px; background: var(--accent-soft); font-size: .88rem; margin-top: 6px; }
+@media (max-width: 560px) { .score-wrap { flex-direction: column; } }
+
+/* assistente */
+.as-chat { max-height: 50vh; min-height: 200px; overflow: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px; }
+.as-msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; line-height: 1.5; font-size: .93rem; }
+.as-msg.bot { background: var(--card2); border: 1px solid var(--line); align-self: flex-start; border-bottom-left-radius: 4px; }
+.as-msg.me { background: var(--accent); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.as-list { margin: 6px 0 0; padding-left: 18px; } .as-list li { margin: 3px 0; }
+
+/* caderno */
+.nb { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+.nb-side { position: sticky; top: 80px; max-height: calc(100vh - 100px); display: flex; flex-direction: column; }
+.nb-list { overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.nb-item { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); cursor: pointer; background: var(--card2); }
+.nb-item:hover, .nb-item.on { border-color: var(--accent); }
+.nb-item .t { font-weight: 600; } .nb-item .s { font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-title { font-size: 1.2rem; font-weight: 700; }
+.nb-editor { min-height: 52vh; font-size: 1rem; line-height: 1.6; }
+.nb-view { min-height: 40vh; line-height: 1.6; } .nb-view p { margin: 0 0 6px; } .nb-view h4 { margin: 12px 0 6px; }
+.nb-check { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; cursor: pointer; } .nb-check.done span { text-decoration: line-through; color: var(--muted); }
+.nb-color { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; } .nb-color.on { border-color: var(--text); }
+@media (max-width: 900px) { .nb { grid-template-columns: 1fr; } .nb-side { position: static; max-height: 40vh; } }
+
+/* mapa do edital */
+.topic { display: flex; gap: 10px; align-items: center; padding: 7px 4px; border-bottom: 1px solid var(--line); }
+.topic .grow { flex: 1; font-size: .92rem; }
+.st-btn { width: 34px; height: 34px; border-radius: 10px; border: 2px solid; background: var(--card2); cursor: pointer; font-size: 1rem; flex-shrink: 0; }
+
+/* sono & humor */
+.faces { display: flex; gap: 6px; flex-wrap: wrap; }
+.face { border: 1px solid var(--line2); background: var(--card2); border-radius: 10px; padding: 6px 10px; cursor: pointer; font-size: 1.1rem; opacity: .55; }
+.face.on { opacity: 1; border-color: var(--accent); background: var(--accent-soft); }
+
+/* viagens */
+.trip-card { cursor: pointer; transition: .15s; } .trip-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+/* QR do celular */
+.lan-qr { width: 230px; margin: 10px auto; background: #fff; padding: 8px; border-radius: 14px; }
+.lan-qr svg { width: 100%; height: auto; display: block; }

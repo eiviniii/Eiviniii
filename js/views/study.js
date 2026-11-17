@@ -142,11 +142,12 @@
         <div class="row between"><span class="muted">Taxa</span><b>${c.taxa ? U.money(c.taxa) : '—'}</b></div><div class="row between"><span class="muted">Remuneração</span><b>${c.salario ? U.money(c.salario) : '—'}</b></div>
         <div class="list mt">${dates || '<p class="muted">Sem datas.</p>'}</div>
         ${c.notes ? `<p class="muted">${U.esc(c.notes)}</p>` : ''}
-        <div class="row mt">${c.fileId ? `<button class="btn sm" data-act="openFile" data-id="${c.fileId}">📄 Edital</button>` : ''}${c.link ? `<a class="btn sm" href="${U.esc(c.link)}" target="_blank" rel="noopener">↗ Site</a>` : ''}<button class="btn sm" data-act="editConc" data-id="${c.id}">✏️ Editar</button></div>
+        <div class="row mt">${c.fileId ? `<button class="btn sm" data-act="openFile" data-id="${c.fileId}">📄 Edital</button>` : ''}${c.link ? `<a class="btn sm" href="${U.esc(c.link)}" target="_blank" rel="noopener">↗ Site</a>` : ''}<button class="btn sm" data-act="emOpen" data-id="${c.id}">🗺️ Mapa${c.topics && c.topics.length ? ' ' + App.EditalMap.pct(c) + '%' : ''}</button><button class="btn sm" data-act="editConc" data-id="${c.id}">✏️ Editar</button></div>
       </div>`; }).join('')}</div>`;
   };
 
   views.biblioteca = () => App.Lib.view();
+  views.mapa = () => App.EditalMap.view();
   views.historico = () => {
     const list = st().sessions.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 300);
     return `<div class="card"><header><h3>🕘 Histórico de estudos</h3><button class="btn primary" data-act="logSession">＋ Registrar</button></header>
@@ -226,7 +227,7 @@
     render(r) {
       const sub = views[r.sub] ? r.sub : 'painel'; this._sub = sub;
       return `<div class="page-head"><div><h1>📚 Estudos</h1><p>Matérias, materiais, cronograma, foco e concursos.</p></div></div>
-        ${App.subtabs('estudos', [['painel', 'Painel'], ['biblioteca', '🔎 Biblioteca'], ['materias', 'Matérias & PDFs'], ['cronograma', 'Cronograma'], ['concursos', 'Concursos & editais'], ['historico', 'Histórico']], sub)}${views[sub]()}`;
+        ${App.subtabs('estudos', [['painel', 'Painel'], ['biblioteca', '🔎 Biblioteca'], ['materias', 'Matérias & PDFs'], ['cronograma', 'Cronograma'], ['concursos', 'Concursos & editais'], ['mapa', '🗺️ Mapa do edital'], ['historico', 'Histórico']], sub)}${views[sub]()}`;
     },
     mount(el) {
       if (this._sub === 'painel') mountPainel();
@@ -235,6 +236,8 @@
     },
     actions: {
       ...App.Lib.actions,
+      ...App.EditalMap.actions,
+      emOpen: (t) => App.EditalMap.openFor(t.dataset.id),
       addSubj: () => subjModal(), editSubj: (t) => subjModal(st().subjects.find((s) => s.id === t.dataset.id)),
       addBlock: (t) => blockModal({}, t.dataset.day !== undefined ? +t.dataset.day : undefined), editBlock: (t) => blockModal(st().schedule.find((b) => b.id === t.dataset.id)),
       logSession: () => sessionModal(),

@@ -34,7 +34,7 @@ import (
 	"time"
 )
 
-const version = "2.0.0"
+const version = "2.1.0"
 
 // Cópia interna do aplicativo: se algum arquivo sumir do pendrive
 // (antivírus, extração incompleta…), o programa serve a cópia daqui.
@@ -43,6 +43,7 @@ const version = "2.0.0"
 var embedded embed.FS
 
 var (
+	handler                                       http.Handler
 	baseDir, appDir, dataDir, filesDir, backupDir string
 	token                                         string
 	idRe                                          = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,100}$`)
@@ -53,8 +54,16 @@ var (
 	pingMu                                        sync.Mutex
 	quitCh                                        = make(chan string, 4)
 	lastBackup                                    time.Time
-	filesInfo                                     string // para mostrar em Ajustes
-	verRe                                         = regexp.MustCompile(`App\.VERSION = '([^']+)'`)
+	// acesso pelo celular na mesma Wi-Fi (desligado por padrão)
+	lanMu        sync.Mutex
+	lanSrv       *http.Server
+	lanHosts     = map[string]bool{}
+	lanURLs      []string
+	mobileToken  string
+	mainPort     int
+	stateVersion int64  // aumenta a cada gravação do estado (sincroniza PC ↔ celular)
+	filesInfo    string // para mostrar em Ajustes
+	verRe        = regexp.MustCompile(`App\.VERSION = '([^']+)'`)
 )
 
 func main() {
@@ -127,7 +136,12 @@ func main() {
 	}
 	log.Printf("arquivos: %s", filesInfo)
 
-	srv := &http.Server{Handler: guard(addr.Port, routes()), ReadHeaderTimeout: 10 * time.Second}
+	mainPort = addr.Port
+	if st, err := os.Stat(filepath.Join(dataDir, "estado.json")); err == nil {
+		stateVersion = st.ModTime().UnixNano() / 1e6
+	}
+	handler = guard(addr.Port, routes())
+	srv := &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("servidor: %v", err)
@@ -145,6 +159,7 @@ func main() {
 	reason := lifecycle(browserDone)
 	log.Printf("encerrando: %s", reason)
 	_ = os.Remove(filepath.Join(dataDir, ".sessao"))
+	lanStop()
 	srv.Close()
 }
 
@@ -191,11 +206,30 @@ func lifecycle(browserDone chan struct{}) string {
 
 /* ---------------- HTTP ---------------- */
 
+func isLoopback(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return false
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
 func guard(port int, next http.Handler) http.Handler {
 	okHosts := map[string]bool{fmt.Sprintf("127.0.0.1:%d", port): true, fmt.Sprintf("localhost:%d", port): true}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !okHosts[r.Host] { // proteção contra DNS rebinding
-			http.Error(w, "host inválido", http.StatusForbidden)
+		local := isLoopback(r)
+		lanMu.Lock()
+		lanOK := lanSrv != nil && lanHosts[r.Host]
+		mt := mobileToken
+		lanMu.Unlock()
+		if local {
+			if !okHosts[r.Host] { // proteção contra DNS rebinding
+				http.Error(w, "host inválido", http.StatusForbidden)
+				return
+			}
+		} else if !lanOK { // acesso pela rede só quando o usuário liga o "usar no celular"
+			http.Error(w, "acesso pela rede desligado", http.StatusForbidden)
 			return
 		}
 		w.Header().Set("Cache-Control", "no-store")
@@ -205,7 +239,8 @@ func guard(port int, next http.Handler) http.Handler {
 			if t == "" && (r.URL.Path == "/api/bye") {
 				t = r.URL.Query().Get("t")
 			}
-			if t != token {
+			ok := (local && t == token) || (!local && mt != "" && t == mt)
+			if !ok {
 				http.Error(w, "não autorizado", http.StatusUnauthorized)
 				return
 			}
@@ -214,14 +249,118 @@ func guard(port int, next http.Handler) http.Handler {
 	})
 }
 
+// IPs da rede local (Wi-Fi/cabo) para o celular acessar
+func lanIPs() []string {
+	var out, other []string
+	addrs, _ := net.InterfaceAddrs()
+	for _, a := range addrs {
+		ipn, ok := a.(*net.IPNet)
+		if !ok || ipn.IP.To4() == nil || ipn.IP.IsLoopback() || ipn.IP.IsLinkLocalUnicast() {
+			continue
+		}
+		if ipn.IP.IsPrivate() {
+			out = append(out, ipn.IP.String())
+		} else {
+			other = append(other, ipn.IP.String())
+		}
+	}
+	if len(out) == 0 { // ex.: hotspot do celular/CGNAT — usa a rede que existir
+		out = other
+	}
+	return out
+}
+
+func lanStart() (map[string]any, error) {
+	lanMu.Lock()
+	defer lanMu.Unlock()
+	if lanSrv == nil {
+		ips := lanIPs()
+		if len(ips) == 0 {
+			return nil, errors.New("nenhuma rede Wi-Fi/cabo encontrada")
+		}
+		ln, err := net.Listen("tcp", "0.0.0.0:47721")
+		if err != nil {
+			ln, err = net.Listen("tcp", "0.0.0.0:0")
+			if err != nil {
+				return nil, err
+			}
+		}
+		port := ln.Addr().(*net.TCPAddr).Port
+		mobileToken = randHex(24)
+		lanHosts = map[string]bool{}
+		lanURLs = nil
+		for _, ip := range ips {
+			h := fmt.Sprintf("%s:%d", ip, port)
+			lanHosts[h] = true
+			lanURLs = append(lanURLs, fmt.Sprintf("http://%s/index.html?t=%s", h, mobileToken))
+		}
+		lanSrv = &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second}
+		go func(s *http.Server) { _ = s.Serve(ln) }(lanSrv)
+		log.Printf("acesso pelo celular ligado: %v", ips)
+	}
+	return map[string]any{"on": true, "urls": lanURLs}, nil
+}
+
+func lanStop() {
+	lanMu.Lock()
+	defer lanMu.Unlock()
+	if lanSrv != nil {
+		_ = lanSrv.Close()
+		lanSrv = nil
+		mobileToken = ""
+		lanHosts = map[string]bool{}
+		lanURLs = nil
+		log.Printf("acesso pelo celular desligado")
+	}
+}
+
 func routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/info", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, map[string]any{"mode": "pendrive", "version": version, "dir": dataDir, "os": runtime.GOOS, "files": filesInfo})
+		writeJSON(w, map[string]any{"mode": "pendrive", "version": version, "dir": dataDir, "os": runtime.GOOS, "files": filesInfo, "remote": !isLoopback(r)})
 	})
 	mux.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) { touch(); w.WriteHeader(204) })
-	mux.HandleFunc("/api/bye", func(w http.ResponseWriter, r *http.Request) { quitCh <- "bye"; w.WriteHeader(204) })
-	mux.HandleFunc("/api/quit", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204); quitCh <- "quit" })
+	mux.HandleFunc("/api/bye", func(w http.ResponseWriter, r *http.Request) {
+		if isLoopback(r) { // fechar a aba do celular não encerra o programa do PC
+			quitCh <- "bye"
+		}
+		w.WriteHeader(204)
+	})
+	mux.HandleFunc("/api/quit", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(204)
+		if isLoopback(r) {
+			quitCh <- "quit"
+		}
+	})
+	mux.HandleFunc("/api/version", func(w http.ResponseWriter, r *http.Request) {
+		writeMu.Lock()
+		v := stateVersion
+		writeMu.Unlock()
+		writeJSON(w, map[string]any{"v": v})
+	})
+	mux.HandleFunc("/api/lan", func(w http.ResponseWriter, r *http.Request) {
+		if !isLoopback(r) { // só o PC liga/desliga
+			http.Error(w, "somente no computador", 403)
+			return
+		}
+		switch r.Method {
+		case http.MethodPost:
+			res, err := lanStart()
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			writeJSON(w, res)
+		case http.MethodDelete:
+			lanStop()
+			writeJSON(w, map[string]any{"on": false})
+		default:
+			lanMu.Lock()
+			res := map[string]any{"on": lanSrv != nil, "urls": lanURLs}
+			lanMu.Unlock()
+			writeJSON(w, res)
+		}
+	})
 	mux.HandleFunc("/api/data/", func(w http.ResponseWriter, r *http.Request) {
 		touch()
 		name := strings.TrimPrefix(r.URL.Path, "/api/data/")
@@ -292,6 +431,11 @@ func serveBlob(w http.ResponseWriter, r *http.Request, path string, isState bool
 			return
 		}
 		defer f.Close()
+		if isState {
+			writeMu.Lock()
+			w.Header().Set("X-Version", fmt.Sprint(stateVersion))
+			writeMu.Unlock()
+		}
 		w.Header().Set("Content-Type", "application/octet-stream")
 		_, _ = io.Copy(w, f)
 	case http.MethodPut:
@@ -303,12 +447,26 @@ func serveBlob(w http.ResponseWriter, r *http.Request, path string, isState bool
 		writeMu.Lock()
 		defer writeMu.Unlock()
 		if isState {
+			// outro aparelho salvou antes? recusa para não sobrescrever (o app recarrega e mescla)
+			if bv := r.Header.Get("X-Base-Version"); bv != "" && bv != fmt.Sprint(stateVersion) {
+				w.Header().Set("X-Version", fmt.Sprint(stateVersion))
+				http.Error(w, "versão desatualizada", http.StatusConflict)
+				return
+			}
 			rotateBackup(path)
 		}
 		if err := atomicWrite(path, body); err != nil {
 			log.Printf("erro gravando %s: %v", path, err)
 			http.Error(w, "falha ao gravar: "+err.Error(), 500)
 			return
+		}
+		if isState {
+			if now := time.Now().UnixNano() / 1e6; now > stateVersion {
+				stateVersion = now
+			} else {
+				stateVersion++
+			}
+			w.Header().Set("X-Version", fmt.Sprint(stateVersion))
 		}
 		w.WriteHeader(204)
 	case http.MethodDelete:

@@ -57,6 +57,7 @@
     for (const d of st().docs || []) if (d.expiry && d.expiry >= from && d.expiry <= to) out.push({ id: 'doc|' + d.id, key: 'doc|' + d.id, virtual: true, title: `Vence: ${d.title}${d.person && d.person !== 'Eu' ? ' (' + d.person + ')' : ''}`, type: 'documento', date: d.expiry, done: false });
     for (const w of st().warranties || []) { const e = App.Warranty && App.Warranty.end(w); if (e && e >= from && e <= to) out.push({ id: 'war|' + w.id, key: 'war|' + w.id, virtual: true, title: `Fim da garantia: ${w.product}`, type: 'documento', date: e, done: false }); }
     if (App.Vehicle) out.push(...App.Vehicle.events(from, to));
+    if (App.Trips) out.push(...App.Trips.events(from, to));
     for (const t of st().tasks || []) if (t.due && !t.done && t.due >= from && t.due <= to) out.push({ id: 'task|' + t.id, key: 'task|' + t.id, virtual: true, title: t.title, type: 'tarefa', date: t.due, done: false });
     return out.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
   };
@@ -86,7 +87,7 @@
   const toggleDone = (key) => {
     const [id, date] = key.split('|');
     if (id === 'task') { const t = (st().tasks || []).find((x) => x.id === date); if (t) { t.done = true; t.doneAt = new Date().toISOString(); } return; }
-    if (id === 'doc' || id === 'war' || id === 'car' || id === 'carm') return;
+    if (id === 'doc' || id === 'war' || id === 'car' || id === 'carm' || id === 'trip') return;
     if (id === 'fatura') { const s = st().settings; s.paidFaturas = s.paidFaturas || []; const i = s.paidFaturas.indexOf(key); i >= 0 ? s.paidFaturas.splice(i, 1) : s.paidFaturas.push(key); return; }
     const e = st().events.find((x) => x.id === id); if (!e) return;
     let nowPaid;

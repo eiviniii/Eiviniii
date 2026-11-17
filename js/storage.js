@@ -71,8 +71,18 @@
     return {
       kind: 'pendrive', label: '💾 Pendrive', token,
       async info() { const r = await req('GET', '/api/info'); return r ? r.json() : null; },
-      async read(name) { const r = await req('GET', '/api/data/' + name); return r ? new Uint8Array(await r.arrayBuffer()) : null; },
-      async write(name, u8) { await req('PUT', '/api/data/' + name, u8); },
+      async read(name) { const r = await req('GET', '/api/data/' + name); if (r && name === 'estado.json') S.version = r.headers.get('X-Version'); return r ? new Uint8Array(await r.arrayBuffer()) : null; },
+      async write(name, u8) {
+        if (name !== 'estado.json') return void (await req('PUT', '/api/data/' + name, u8));
+        // envia a versão em que se baseou; se outro aparelho salvou antes, o servidor responde 409
+        const h = { ...H }; if (S.version) h['X-Base-Version'] = S.version;
+        const r = await fetch('/api/data/estado.json', { method: 'PUT', headers: h, body: u8, cache: 'no-store' });
+        if (r.status === 409) { const e = new Error('conflito'); e.conflict = true; throw e; }
+        if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+        S.version = r.headers.get('X-Version') || S.version;
+      },
+      async version() { const r = await req('GET', '/api/version'); return r ? String((await r.json()).v) : null; },
+      async lan(method = 'GET') { const r = await req(method, '/api/lan'); return r ? r.json() : null; },
       async remove(name) { await req('DELETE', '/api/data/' + name); },
       async fread(id) { const r = await req('GET', '/api/files/' + id); return r ? new Uint8Array(await r.arrayBuffer()) : null; },
       async fwrite(id, u8) { await req('PUT', '/api/files/' + id, u8); },
@@ -130,11 +140,49 @@
     try {
       let u8 = te.encode(JSON.stringify(state));
       if (S.vault) u8 = await Crypto.enc(u8);
-      await S.backend.write('estado.json', u8);
+      try { await S.backend.write('estado.json', u8); }
+      catch (e) {
+        if (!e.conflict) throw e;
+        // outro aparelho salvou junto: junta as duas versões e grava de novo
+        const remote = await S.loadState();
+        App.load(mergeStates(remote, App.state));
+        let u = te.encode(JSON.stringify(App.state)); if (S.vault) u = await Crypto.enc(u);
+        await S.backend.write('estado.json', u);
+        App.rerender(); App.toast('🔄 Juntei suas mudanças com as do outro aparelho');
+      }
       S.lastSave = new Date(); setStatus('saved');
     } catch (e) { console.error(e); setStatus('error'); App.toast('⚠️ Não consegui salvar no ' + S.backend.label.replace(/^\S+\s/, '') + '. O pendrive foi removido?', 'error'); }
     saving = false;
     if (again) { again = false; S.saveState(App.state); }
+  };
+  /** junta dois estados: itens (com id) dos dois lados ficam; quando existem nos dois, vale o deste aparelho */
+  function mergeStates(remote, local) {
+    if (!remote) return local;
+    const out = { ...remote };
+    for (const k of Object.keys(local)) {
+      const a = remote[k], b = local[k];
+      if (Array.isArray(a) && Array.isArray(b) && b.every((x) => x && typeof x === 'object' && 'id' in x)) {
+        const map = new Map(a.filter((x) => x && x.id != null).map((x) => [x.id, x]));
+        for (const x of b) map.set(x.id, x);
+        out[k] = [...map.values()];
+      } else out[k] = b;
+    }
+    return out;
+  }
+  S.mergeStates = mergeStates;
+  /** outro aparelho (celular ↔ PC) salvou? recarrega quando não houver nada pendente aqui */
+  S.watchRemote = () => {
+    if (!S.backend || !S.backend.version) return;
+    setInterval(async () => {
+      if (S.hasPending() || document.querySelector('.modal-wrap') || document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+      try {
+        const v = await S.backend.version();
+        if (v && S.version && v !== S.version) {
+          const st = await S.loadState(); if (!st) return;
+          App.load(st); App.applyTheme(); App.rerender(); App.toast('🔄 Atualizado com as mudanças do outro aparelho');
+        }
+      } catch (e) { /* PC desligado ou sem rede */ }
+    }, 3000);
   };
   S.flush = async () => { if (pending) { clearTimeout(pending); pending = null; } await S.saveState(App.state); };
   S.scheduleSave = () => { setStatus(S.isRemote() ? 'saving' : 'saved'); clearTimeout(pending); pending = setTimeout(() => { pending = null; S.saveState(App.state); }, S.isRemote() ? 600 : 250); };
@@ -291,6 +339,7 @@
       try { S.info = await b.info(); if (S.info) S.backend = b; } catch (e) { console.warn('servidor portátil indisponível', e); }
       if (S.backend) {
         b.ping(); setInterval(() => b.ping(), 10000);
+        if (S.info.remote) { b.label = '📱 Celular → PC'; b.kind = 'pendrive'; }
         window.addEventListener('pagehide', () => { if (S.hasPending()) S.saveState(App.state); b.bye(); });
       }
     }

@@ -92,6 +92,7 @@
           <div class="list"><div class="li"><span class="dot" style="background:var(--ok)"></span><div class="grow">Receita</div><b>${U.money(inc)}</b></div><div class="li"><span class="dot" style="background:var(--bad)"></span><div class="grow">Despesas</div><b>${U.money(exp)}</b></div></div></div></div>
       <div class="card"><header><h3>🗓️ Gastos por dia</h3><small class="muted">${U.money(exp)}</small></header>${App.Money.heatmap(ym)}</div>
     </div>
+    ${ym === U.ym() ? `<div style="margin-bottom:16px">${App.Score.card()}</div>` : ''}
     ${ins.length ? `<div class="card" style="margin-bottom:16px"><header><h3>💡 Oportunidades e alertas</h3><small class="muted">análise automática dos seus gastos</small></header><div class="insights">${ins.map((i) => `<div class="insight ${i.lvl}"><span class="ii">${i.ico}</span><div><b>${U.esc(i.t)}</b><small>${U.esc(i.s)}</small></div></div>`).join('')}</div></div>` : ''}
     <div class="row between" style="margin-bottom:14px">
       <div class="row"><button class="btn sm" data-act="ymPrev">‹</button><h2 style="min-width:170px;text-align:center;text-transform:capitalize">${U.ymLabel(ym)}</h2><button class="btn sm" data-act="ymNext">›</button>
@@ -477,6 +478,10 @@
 
   views.contas = () => App.Money.viewContas();
   views.assinaturas = () => App.Subs.view();
+  views.desejos = () => App.Wish.view();
+  views.rachar = () => App.Split.view();
+  views.ir = () => App.IR.view();
+  views.calculadoras = () => App.Calc.view();
   views.metas = () => App.Money.viewMetas();
 
   /* ---------- view ---------- */
@@ -486,10 +491,11 @@
       const sub = views[r.sub] ? r.sub : 'visao';
       this._sub = sub;
       return `<div class="page-head"><div><h1>💰 Finanças</h1><p>Gastos, parcelas, relatórios e orçamento — tudo num lugar só.</p></div></div>
-        ${App.subtabs('financas', [['visao', 'Visão geral'], ['contas', 'Contas & saldo'], ['metas', 'Orçamento & metas'], ['parcelas', 'Parcelas & dívidas'], ['gastos', 'Gastos'], ['importar', 'Subir relatório'], ['categorias', 'Categorias & orçamento'], ['assinaturas', '🔁 Assinaturas'], ['cartoes', 'Cartões']], sub)}
+        ${App.subtabs('financas', [['visao', 'Visão geral'], ['contas', 'Contas & saldo'], ['metas', 'Orçamento & metas'], ['parcelas', 'Parcelas & dívidas'], ['gastos', 'Gastos'], ['importar', 'Subir relatório'], ['categorias', 'Categorias & orçamento'], ['assinaturas', '🔁 Assinaturas'], ['desejos', '🎁 Desejos'], ['rachar', '🍕 Rachar contas'], ['ir', '🦁 Imposto de Renda'], ['calculadoras', '🧮 Calculadoras'], ['cartoes', 'Cartões']], sub)}
         ${views[sub]()}`;
     },
     mount(el) {
+      if (this._sub === 'calculadoras') App.Calc.run();
       if (this._sub === 'visao') mountVisao();
       if (this._sub === 'gastos') mountGastos();
       const drop = el.querySelector('#imp-drop');
@@ -503,7 +509,7 @@
     },
     actions: {
       ...App.Money.actions,
-      ...App.Subs.actions,
+      ...App.Subs.actions, ...App.Calc.actions, ...App.IR.actions, ...App.Split.actions, ...App.Wish.actions,
       ymPrev: () => { S.ym = U.addMonthsYM(S.ym, -1); App.rerender(); },
       ymNext: () => { S.ym = U.addMonthsYM(S.ym, 1); App.rerender(); },
       ymNow: () => { S.ym = U.ym(); App.rerender(); },

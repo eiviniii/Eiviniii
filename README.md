@@ -14,6 +14,7 @@ Funciona direto no navegador (computador ou celular), **sem servidor e sem login
 4. Para atualizar: substitua só o programa. A pasta `dados` continua.
 
 Extras do modo pendrive:
+- **📱 Usar no celular (mesma Wi-Fi):** em Ajustes → Armazenamento, ligue e escaneie o QR Code. O celular acessa o Vida OS do PC pelo navegador; nada fica salvo no celular. PC e celular sincronizam sozinhos (se os dois salvarem juntos, as mudanças são unidas). Desligue quando terminar.
 - **Cofre no estilo KeePassXC** (Ajustes → Armazenamento & segurança):
   - senha-mestra com medidor de força + **arquivo-chave opcional** (2º fator: sem o arquivo, a senha sozinha não abre);
   - criptografia **AES‑256‑GCM** de todos os dados e PDFs; chave derivada com **PBKDF2‑SHA256, 600 mil iterações**;
@@ -42,6 +43,15 @@ Abra o `index.html` (ou publique no GitHub Pages: Settings → Pages). Nesse mod
 - **Gastos:** filtre por dia, semana, mês, ano ou período; busque por nome, valor ou nota; gráficos por categoria e evolução no tempo. Se você corrige uma categoria, ele **aprende** aquele estabelecimento.
 - **Orçamento** por categoria, **cartões** (fechamento e vencimento aparecem na agenda).
 
+- **Nota de saúde financeira (0–100)** com 3 dicas práticas (reserva, sobra do salário, dívidas, investimentos, controle).
+- **Desejos:** lista com preço, link e prioridade, e quando dá para comprar sem estourar o orçamento.
+- **Rachar contas:** quem pagou o quê, quem deve a quem (mínimo de pagamentos) e mensagem pronta para o WhatsApp.
+- **Imposto de Renda organizado:** comprovantes dedutíveis (sugere gastos de saúde/educação), informes, bens em 31/12, dividendos isentos, checklist e resumo para imprimir.
+- **Calculadoras:** salário líquido, férias, 13º, rescisão (tabelas de INSS/IR editáveis, com a isenção até R$ 5 mil de 2026) e **à vista × parcelado** com o dinheiro rendendo no CDI.
+
+### 💬 Assistente (offline, sem custo)
+Pergunte em português: "quanto gastei com comida em outubro?", "onde mais gastei?", "resuma meu mês", "quando vence minha CNH?", "quanto falta para a meta?". Ele responde com os seus dados, sem internet e sem IA paga. Também funciona digitando a pergunta na busca do topo.
+
 ### 📈 Investimentos
 - **Planejamento:** salário → quanto investir (% ou R$) → por quantos anos → onde você chega. Considera aumento anual, 13º, extras, IR e inflação; compara CDB, FIIs, Tesouro IPCA+ e poupança; tabela **ano a ano e mês a mês com aportes editáveis**; calculadoras ("quanto investir para ter X", "em quanto tempo chego", "quanto preciso para viver de renda").
 - **FIIs:** cotas, preço médio, cotação, último dividendo → renda mensal, DY, yield on cost e **número mágico**. Atualização automática de cotações/dividendos com token grátis da [brapi.dev](https://brapi.dev) (opcional).
@@ -53,6 +63,12 @@ CNH, RG, CPF, certidões, reservista, comprovantes… Anexe frente/verso (foto o
 - **Garantias & notas fiscais:** guarde a NF com o prazo de garantia; avisa antes de acabar.
 - **🆘 Ficha de emergência:** tipo sanguíneo, alergias, remédios, plano de saúde e contatos (ligar/WhatsApp). Pode aparecer na **tela de bloqueio** do cofre para quem te socorrer — só a ficha, o resto continua criptografado.
  Busca e filtros, botão de copiar o número, miniaturas, visualizador com zoom/giro, **aviso de vencimento** (também na Agenda e no Início) e lista de **documentos essenciais** que ainda faltam. No pendrive com senha, tudo fica criptografado.
+
+### ✈️ Viagens
+Orçamento por categoria × gasto real (dá para puxar os lançamentos do período), roteiro por dia, checklist de mala e documentos, custo por pessoa e combustível estimado com o consumo real do carro.
+
+### 🗒️ Caderno
+Notas com pastas, fixar, cores, anexos e busca; linhas `[ ]` viram caixinhas marcáveis.
 
 ### ✅ Rotina
 - Tarefas com prioridade e prazo (aparecem na Agenda) e hábitos diários com sequência de dias.
@@ -72,12 +88,15 @@ Atalhos com logo, descrição e etiquetas — pesquise "remover fundo", "juntar 
 - **Biblioteca:** suba o PDF com a data, matéria e assunto; depois **pesquise qualquer palavra que esteja dentro dele** (mostra o trecho destacado). Funciona offline.
 - Matérias com **PDFs** salvos no aparelho, **cronograma semanal**, **Pomodoro** que registra suas horas, metas por matéria, sequência de dias.
 - **Concursos:** suba o **edital em PDF** e ele extrai datas de inscrição, isenção, pagamento, prova, **TAF**, **exames médicos**, avaliação psicológica, resultado, além de taxa, salário, vagas e banca — e joga tudo na agenda.
+- **🗺️ Mapa do edital:** lê o conteúdo programático do PDF do edital (ou texto colado) e vira checklist de tópicos por matéria, com % dominado, ritmo necessário até a prova e ▶ para estudar o tópico no Pomodoro.
 - Revisões espaçadas (1, 7 e 30 dias) opcionais.
 
 ### 💪 Fitness
 - **Avatar do corpo animado** (frente e lado): engorda/desincha conforme peso, altura e % de gordura; **zonas de calor** mostram onde a gordura acumula (homem: barriga, peito e flancos; mulher: quadril e coxas). Linha do tempo, animação da evolução e contorno do 1º registro para comparar.
 - **Atualizar medidas:** suba os arquivos da balança e do relógio Samsung (PDF, foto/print, CSV do Samsung Health ou Excel). Se mandar dois, ele mescla os valores. Tudo é editável antes de salvar.
 - **Plano de treino** por dia da semana: musculação (séries, reps, carga, descanso) e **corrida** (tipo, distância, duração, pace, zona Z1–Z5, intervalos). Importa planilha Excel/CSV e tem modelos prontos (ABC, preparação para TAF, 5 km).
+- **💊 Remédios & suplementos:** horários, dias, estoque (avisa quando está acabando), lembretes e quanto você tomou nos últimos 14 dias.
+- **😴 Sono & humor:** registro rápido diário e gráficos que cruzam sono, humor, energia e treinos.
 - **Registro de treino**, evolução de carga e pace, gráficos de peso/gordura/músculo, calculadoras (TMB, TDEE, calorias, proteína, água, zonas de FC).
 
 ### 📅 Agenda
