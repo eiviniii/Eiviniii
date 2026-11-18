@@ -18,3 +18,11 @@ func fatal(msg string) {
 	_, _, _ = u.Call(0, uintptr(unsafe.Pointer(m)), uintptr(unsafe.Pointer(t)), 0x10)
 	os.Exit(1)
 }
+
+// openDefault abre o endereço no navegador padrão (ShellExecute, sem rundll32).
+func openDefault(url string) {
+	sh := syscall.NewLazyDLL("shell32.dll").NewProc("ShellExecuteW")
+	verb, _ := syscall.UTF16PtrFromString("open")
+	u, _ := syscall.UTF16PtrFromString(url)
+	_, _, _ = sh.Call(0, uintptr(unsafe.Pointer(verb)), uintptr(unsafe.Pointer(u)), 0, 0, 1)
+}

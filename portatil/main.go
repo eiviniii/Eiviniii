@@ -581,16 +581,7 @@ func openBrowser(url string, fresh bool, done ...chan struct{}) {
 	}
 	// nenhum navegador compatível: usa o padrão do sistema
 	log.Printf("abrindo navegador padrão")
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	_ = cmd.Start()
+	openDefault(url)
 	if len(done) > 0 {
 		close(done[0]) // não dá para acompanhar a janela; o fechamento vem pelos sinais da página
 	}
