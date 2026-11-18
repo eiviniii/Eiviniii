@@ -20,11 +20,10 @@
   };
 
   /** Texto do PDF reconstruído em linhas (agrupando itens pela coordenada Y). */
-  P.pdfText = async (file) => {
+  P.openPdf = async (file) => {
     if (!window.pdfjsLib) throw new Error('Leitor de PDF não carregou.');
     const buf = await file.arrayBuffer();
-    let pdf;
-    try { pdf = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise; }
+    try { return await pdfjsLib.getDocument({ data: buf.slice(0) }).promise; }
     catch (e) {
       if (!/worker/i.test(e.message || '')) throw e;
       // o "worker" do leitor não carregou (arquivo bloqueado/ausente): tenta outras fontes
@@ -34,25 +33,44 @@
         try { await App.loadScript(src); if (window.pdfjsWorker) { ok = true; break; } } catch (x) { /* próxima */ }
       }
       if (!ok) throw new Error('O componente que lê PDF (vendor/pdf.worker.min.js) foi bloqueado ou está faltando — geralmente é o antivírus. Abra pelo VidaOS-Windows.exe atualizado ou restaure esse arquivo da quarentena.');
-      pdf = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
+      return pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
     }
+  };
+  /** Linhas do PDF com página e posição. Junta os pedaços pela distância real entre eles:
+   *  texto justificado quebra palavras ("consuma r") em pedaços colados — só põe espaço onde há espaço. */
+  P.pdfLines = async (file) => {
+    const pdf = await P.openPdf(file);
     const lines = [];
     for (let p = 1; p <= pdf.numPages; p++) {
       const page = await pdf.getPage(p);
       const tc = await page.getTextContent();
       const rows = [];
       for (const it of tc.items) {
-        if (!it.str || !it.str.trim()) continue;
-        const y = it.transform[5], x = it.transform[4];
-        let row = rows.find((r) => Math.abs(r.y - y) < 3);
-        if (!row) { row = { y, parts: [] }; rows.push(row); }
-        row.parts.push({ x, s: it.str });
+        if (!it.str) continue;
+        const y = it.transform[5], x = it.transform[4], h = Math.hypot(it.transform[2], it.transform[3]) || it.height || 10;
+        let row = rows.find((r) => Math.abs(r.y - y) < Math.max(2.5, h * 0.35));
+        if (!row) { row = { y, h, parts: [] }; rows.push(row); }
+        row.h = Math.max(row.h, h);
+        row.parts.push({ x, w: it.width || 0, s: it.str, h });
       }
       rows.sort((a, b) => b.y - a.y);
-      for (const r of rows) lines.push(r.parts.sort((a, b) => a.x - b.x).map((q) => q.s).join(' ').replace(/\s+/g, ' ').trim());
+      for (const r of rows) {
+        const ps = r.parts.sort((a, b) => a.x - b.x);
+        let out = '', prev = null;
+        for (const q of ps) {
+          if (prev) {
+            const gap = q.x - (prev.x + prev.w);
+            if (!/\s$/.test(out) && !/^\s/.test(q.s) && gap > Math.min(prev.h, q.h) * 0.14) out += ' ';
+          }
+          out += q.s; prev = q;
+        }
+        const t = out.replace(/\s+/g, ' ').trim();
+        if (t) lines.push({ t, page: p, y: r.y, h: r.h });
+      }
     }
-    return lines.join('\n');
+    return lines;
   };
+  P.pdfText = async (file) => (await P.pdfLines(file)).map((l) => l.t).join('\n');
 
   P.sheetRows = async (file) => {
     if (!window.XLSX) throw new Error('Leitor de planilhas não carregou.');

@@ -599,3 +599,43 @@ code { background: var(--card2); padding: 1px 6px; border-radius: 6px; font-size
 /* QR do celular */
 .lan-qr { width: 230px; margin: 10px auto; background: #fff; padding: 8px; border-radius: 14px; }
 .lan-qr svg { width: 100%; height: auto; display: block; }
+
+/* Questões */
+.q-run { max-width: 920px; margin: 0 auto; }
+.q-text { font-size: 1.05rem; line-height: 1.65; margin: 16px 0 10px; white-space: normal; }
+.q-img { margin: 14px 0 6px; background: #fff; border-radius: 12px; padding: 8px; text-align: center; min-height: 40px; display: grid; place-items: center; }
+.q-img img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+.q-img.sm { padding: 4px; } .q-img.sm img { max-height: 260px; }
+.q-img small { color: #555; }
+.q-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.q-opt { display: flex; gap: 12px; align-items: flex-start; text-align: left; width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line2); background: var(--card2); color: var(--text); font: inherit; line-height: 1.5; cursor: pointer; transition: .12s; }
+.q-opt b { flex: 0 0 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--line); font-weight: 800; text-transform: uppercase; }
+.q-opt:hover:not([disabled]) { border-color: var(--accent); transform: translateX(2px); }
+.q-opt.sel { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); } .q-opt.sel b { background: var(--accent); color: #fff; }
+.q-opt.right { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); } .q-opt.right b { background: var(--ok); color: #fff; }
+.q-opt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 15%, transparent); } .q-opt.wrong b { background: var(--bad); color: #fff; }
+.q-opt[disabled] { cursor: default; }
+.q-rev { border: 1px solid var(--line2); border-radius: 12px; padding: 12px; margin-bottom: 12px; background: var(--card2); }
+.q-rev.bad { border-color: var(--warn); box-shadow: inset 3px 0 0 var(--warn); }
+.q-rev textarea { min-height: 70px; }
+.q-rev-opt { display: grid; grid-template-columns: 34px 1fr; gap: 6px; align-items: center; margin-top: 6px; }
+
+/* Mapas mentais */
+.mm-group { margin-top: 18px; } .mm-group h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+.mm-topic { margin: 10px 0 6px; font-weight: 600; color: var(--muted); font-size: .9rem; }
+.mm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.mm-card { border: 1px solid var(--line2); border-radius: 14px; overflow: hidden; background: var(--card2); cursor: pointer; transition: .15s; box-shadow: inset 0 3px 0 var(--c); }
+.mm-card:hover { border-color: var(--c); transform: translateY(-2px); }
+.mm-thumb { position: relative; aspect-ratio: 4 / 3; background: color-mix(in srgb, var(--c) 12%, var(--bg2)); display: grid; place-items: center; overflow: hidden; }
+.mm-thumb img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s; position: absolute; inset: 0; } .mm-thumb img.ok { opacity: 1; }
+.mm-thumb span { font-size: 2rem; }
+.mm-info { padding: 10px; } .mm-info .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .mm-info .s { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+.mm-stage { height: min(68vh, 720px); background: #0008; border-radius: 12px; overflow: hidden; display: grid; place-items: center; cursor: grab; touch-action: none; user-select: none; }
+.mm-stage.drag { cursor: grabbing; } .mm-stage.pdf { cursor: default; touch-action: auto; }
+.mm-doc { max-width: 100%; transform-origin: center top; pointer-events: none; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.mm-doc img { max-width: 100%; max-height: min(68vh, 720px); display: block; }
+.mm-stage:fullscreen .mm-doc img { max-height: 100vh; }
+.mm-doc canvas { width: 100%; height: auto; background: #fff; border-radius: 6px; display: block; }
+.mm-stage:has(canvas) { place-items: start center; padding: 10px; } .mm-doc:has(canvas) { width: min(100%, 900px); }
+.mm-stage iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.mm-stage:fullscreen { height: 100vh; border-radius: 0; background: #000; }

@@ -84,7 +84,8 @@
       </div>
     </div>
     <div class="grid g2 mt"><div class="card"><header><h3>📊 Últimos 14 dias</h3></header><div class="chart-box"><canvas id="st-14"></canvas></div></div>
-      <div class="card"><header><h3>🧠 Por matéria (30 dias)</h3></header><div class="chart-box"><canvas id="st-subj"></canvas></div></div></div>`;
+      <div class="card"><header><h3>🧠 Por matéria (30 dias)</h3></header><div class="chart-box"><canvas id="st-subj"></canvas></div></div></div>
+    ${App.MindMaps.widget() ? `<div class="mt">${App.MindMaps.widget()}</div>` : ''}`;
   };
   const mountPainel = () => {
     paintTimer();
@@ -148,6 +149,8 @@
 
   views.biblioteca = () => App.Lib.view();
   views.mapa = () => App.EditalMap.view();
+  views.questoes = () => App.Questions.view();
+  views.mapas = () => App.MindMaps.view();
   views.historico = () => {
     const list = st().sessions.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 300);
     return `<div class="card"><header><h3>🕘 Histórico de estudos</h3><button class="btn primary" data-act="logSession">＋ Registrar</button></header>
@@ -227,16 +230,20 @@
     render(r) {
       const sub = views[r.sub] ? r.sub : 'painel'; this._sub = sub;
       return `<div class="page-head"><div><h1>📚 Estudos</h1><p>Matérias, materiais, cronograma, foco e concursos.</p></div></div>
-        ${App.subtabs('estudos', [['painel', 'Painel'], ['biblioteca', '🔎 Biblioteca'], ['materias', 'Matérias & PDFs'], ['cronograma', 'Cronograma'], ['concursos', 'Concursos & editais'], ['mapa', '🗺️ Mapa do edital'], ['historico', 'Histórico']], sub)}${views[sub]()}`;
+        ${App.subtabs('estudos', [['painel', 'Painel'], ['biblioteca', '🔎 Biblioteca'], ['materias', 'Matérias & PDFs'], ['cronograma', 'Cronograma'], ['concursos', 'Concursos & editais'], ['questoes', '📝 Questões'], ['mapas', '🧠 Mapas mentais'], ['mapa', '🗺️ Mapa do edital'], ['historico', 'Histórico']], sub)}${views[sub]()}`;
     },
     mount(el) {
       if (this._sub === 'painel') mountPainel();
+      if (this._sub === 'questoes') App.Questions.mount(el);
+      if (this._sub === 'mapas') App.MindMaps.mount(el);
       const inp = el.querySelector('[name=files]'); const ch = el.querySelector('#lib-chosen');
       if (inp && ch) inp.addEventListener('change', () => { ch.textContent = [...inp.files].map((f) => f.name).join(', '); });
     },
     actions: {
       ...App.Lib.actions,
       ...App.EditalMap.actions,
+      ...App.Questions.actions,
+      ...App.MindMaps.actions,
       emOpen: (t) => App.EditalMap.openFor(t.dataset.id),
       addSubj: () => subjModal(), editSubj: (t) => subjModal(st().subjects.find((s) => s.id === t.dataset.id)),
       addBlock: (t) => blockModal({}, t.dataset.day !== undefined ? +t.dataset.day : undefined), editBlock: (t) => blockModal(st().schedule.find((b) => b.id === t.dataset.id)),

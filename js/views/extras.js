@@ -110,7 +110,7 @@
   const studyH = () => U.sum(st().sessions, (s) => s.minutes) / 60;
   const habitDays = () => U.sum(st().habits || [], (h) => Object.keys(h.log || {}).length);
   const doneTasks = () => (st().tasks || []).filter((t) => t.done).length + (st().tasksDoneCount || 0);
-  A.xp = () => Math.round(st().workoutLogs.length * 25 + studyH() * 12 + habitDays() * 5 + doneTasks() * 3 + st().body.length * 10 + (st().docs || []).length * 5 + st().transactions.length * 0.2 + U.sum(st().goals || [], (g) => Math.min(g.saved || 0, g.target) / 100));
+  A.xp = () => Math.round(st().workoutLogs.length * 25 + studyH() * 12 + habitDays() * 5 + doneTasks() * 3 + st().body.length * 10 + (st().docs || []).length * 5 + st().transactions.length * 0.2 + U.sum(st().goals || [], (g) => Math.min(g.saved || 0, g.target) / 100) + U.sum(st().questions || [], (q) => (q.attempts || []).length * 2) + U.sum(st().mindmaps || [], (m) => (m.reviews || []).length * 4));
   A.level = (xp = A.xp()) => { let lv = 1, need = 100, acc = 0; while (xp >= acc + need) { acc += need; lv++; need = Math.round(need * 1.25); } return { lv, cur: xp - acc, need, pct: ((xp - acc) / need) * 100, title: ['Iniciante', 'Aprendiz', 'Focado', 'Disciplinado', 'Dedicado', 'Imparável', 'Mestre', 'Lenda'][Math.min(7, Math.floor((lv - 1) / 3))] }; };
   const monthsGreen = () => { let n = 0; for (let i = 1; i <= 12; i++) { const m = U.addMonthsYM(U.ym(), -i); const inc = App.Fin.monthIncome(m), exp = App.Fin.monthExpenses(m); if (inc && inc > exp) n++; } return n; };
   const firstLast = (k) => { const e = App.Fit.entries().filter((x) => x[k]); return e.length > 1 ? e[0][k] - e[e.length - 1][k] : 0; };

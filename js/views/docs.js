@@ -52,6 +52,7 @@
     const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.78));
     return blob ? new File([blob], 'thumb.jpg', { type: 'image/jpeg' }) : null;
   };
+  D.makeThumb = (file) => makeThumb(file);
   D.thumbURL = async (fileId) => {
     if (thumbs.has(fileId)) return thumbs.get(fileId);
     const f = await App.files.get('thumb-' + fileId);
