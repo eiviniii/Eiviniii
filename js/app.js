@@ -11,7 +11,7 @@
     const st = { saved: ['ok', 'salvo'], saving: ['warn', 'salvando…'], error: ['bad', 'ERRO ao salvar'] }[S.status] || ['ok', ''];
  const html = `<span class="dot"></span><span><b>${S.backend.label}</b><small>${st[1]}${S.lastSave && S.status === 'saved' ? ' · ' + S.lastSave.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</small></span>`;
     ['save-badge', 'save-badge-m'].forEach((id) => { const b = document.getElementById(id); if (b) { b.className = 'save-badge ' + st[0] + (id.endsWith('-m') ? ' mobile-only' : ''); b.innerHTML = html; } });
-    document.getElementById('quit-btn').style.display = S.backend.kind === 'pendrive' && !(S.info && S.info.remote) ? '' : 'none';
+    document.getElementById('quit-btn').style.display = (S.backend.kind === 'pendrive' && !(S.info && S.info.remote)) || (S.backend.kind === 'pasta' && S.isFile) ? '' : 'none';
     document.getElementById('lock-btn').style.display = S.vault ? '' : 'none';
   };
 

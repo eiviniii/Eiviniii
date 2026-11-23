@@ -1,0 +1,60 @@
+VIDA OS 2.1 - PENDRIVE                    (sistema @VERSAO@)
+=================================================================
+
+Ha DUAS formas de abrir. As duas usam a MESMA pasta "dados",
+entao pode alternar entre elas a vontade.
+
+  A) VidaOS-Windows.exe ................ programa (janela propria)
+  B) Abrir Vida OS no navegador.html ... abre no Edge/Chrome,
+                                          SEM programa nenhum
+
+INSTALAR
+1. Abra este .zip (dois cliques).
+2. ARRASTE a pasta "VidaOS" para o pendrive.
+3. A pasta "dados" e onde ficam suas informacoes - NAO apague.
+
+-----------------------------------------------------------------
+"O CONTROLE INTELIGENTE DE APLICATIVOS BLOQUEOU UM APLICATIVO"
+-----------------------------------------------------------------
+O Windows 11 bloqueia qualquer .exe sem assinatura digital paga,
+e nao tem botao de liberar. Use a forma B:
+
+1. No pendrive, abra a pasta VidaOS.
+2. Dois cliques em  "Abrir Vida OS no navegador".
+   (Se abrir no Firefox: botao direito -> Abrir com ->
+    Microsoft Edge ou Google Chrome.)
+3. Clique em "Escolher a pasta do pendrive" e escolha a pasta
+   VidaOS do pendrive (ou a pasta dados dentro dela).
+4. O navegador pergunta se pode ver/editar a pasta:
+   clique em "Editar arquivos" / "Permitir".
+5. Se usa senha, digite. Pronto - sao os seus dados de sempre.
+
+Nas proximas vezes so aparece o botao "Permitir acesso a pasta".
+Dica: no Edge, marque "Permitir em todas as visitas" para nao
+perguntar mais.
+Se o pendrive mudar de letra (E:, F:...), use
+"Escolher a pasta de novo".
+
+-----------------------------------------------------------------
+OUTROS AVISOS DO WINDOWS (so para o .exe)
+-----------------------------------------------------------------
+ a) "O Windows protegeu o computador" (tela azul):
+    "Mais informacoes" -> "Executar assim mesmo".
+ b) O .exe sumiu / "ameaca encontrada" (Defender):
+    Seguranca do Windows -> Protecao contra virus e ameacas ->
+    Historico de protecao -> item do VidaOS -> Acoes ->
+    "Permitir no dispositivo".
+
+ATUALIZAR NO FUTURO
+   Substitua o VidaOS-Windows.exe, o arquivo "Abrir Vida OS no
+   navegador" e a pasta "sistema". A pasta "dados" continua.
+
+SAIR
+   Botao "Sair com seguranca" antes de tirar o pendrive.
+
+SE DER ALGUM ERRO
+   Mande um print (e, no modo .exe, o arquivo dados\log.txt).
+
+USAR NO CELULAR (mesma Wi-Fi) - so no modo .exe
+   Ajustes -> Armazenamento & seguranca -> "Ligar acesso pelo
+   celular" e aponte a camera do celular para o QR Code.

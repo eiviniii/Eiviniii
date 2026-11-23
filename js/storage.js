@@ -101,7 +101,7 @@
     const wr = async (d, name, u8) => { const h = await d.getFileHandle(name, { create: true }); const w = await h.createWritable(); await w.write(u8); await w.close(); };
     const rm = async (d, name) => { try { await d.removeEntry(name); } catch (e) { /* já não existe */ } };
     return {
-      kind: 'pasta', label: '📁 Pasta', dir,
+      kind: 'pasta', label: location.protocol === 'file:' ? '💾 Pendrive' : '📁 Pasta', dir,
       async info() { return { dir: dir.name }; },
       read: (n) => rd(dir, n), write: (n, u8) => wr(dir, n, u8), remove: (n) => rm(dir, n),
       fread: async (id) => rd(await sub(), id), fwrite: async (id, u8) => wr(await sub(), id, u8), fdel: async (id) => rm(await sub(), id),
@@ -271,8 +271,14 @@
 
   /* ---------- pasta (File System Access) ---------- */
   S.folderSupported = () => 'showDirectoryPicker' in window;
+  const isFile = location.protocol === 'file:';
+  S.isFile = isFile;
   S.pickFolder = async () => {
-    const dir = await window.showDirectoryPicker({ id: 'vidaos', mode: 'readwrite' });
+    let dir = await window.showDirectoryPicker({ id: 'vidaos', mode: 'readwrite' });
+    // escolheu a pasta VidaOS (ou a raiz do pendrive)? entra sozinho na pasta "dados" do programa
+    for (const p of ['dados', 'VidaOS/dados']) {
+      try { let d = dir; for (const n of p.split('/')) d = await d.getDirectoryHandle(n); dir = d; break; } catch (e) { /* não tem */ }
+    }
     await idb('kv', 'readwrite', (st) => st.put(dir, 'folder'));
     return folderBackend(dir);
   };
@@ -315,16 +321,25 @@
   };
 
   const connectFolder = async (handle) => {
-    const g = await gate(`<h2>Conectar seus dados 📁</h2><p class="muted">Este navegador está configurado para usar uma pasta${handle ? ` (<b>${U.esc(handle.name)}</b>)` : ''} — por exemplo, no seu pendrive.</p>
+    const g = await gate(isFile && !handle
+      ? `<h2>Abrir seus dados do pendrive 💾</h2><p class="muted">Você abriu o Vida OS direto pelo navegador (sem o programa .exe).<br>Clique abaixo e escolha a pasta <b>VidaOS</b> do pendrive — ou a pasta <b>dados</b> dentro dela. São os mesmos dados do programa.</p>
+        <button class="btn primary block" id="g-pick">📂 Escolher a pasta do pendrive</button>
+        <p class="muted" style="margin-top:12px"><small>O navegador vai perguntar se pode “ver e editar” a pasta: clique em <b>Editar arquivos</b> / <b>Permitir</b>.</small></p>
+        <button class="btn ghost block mt" id="g-local">Testar sem pendrive (salva neste computador)</button><p class="err" id="g-err"></p>`
+      : isFile ? `<h2>Abrir seus dados do pendrive 💾</h2><p class="muted">Por segurança, o navegador pede licença toda vez que o Vida OS é aberto para mexer na pasta <b>${U.esc(handle.name)}</b> do pendrive.</p>
+        <button class="btn primary block" id="g-reopen">🔓 Permitir acesso à pasta</button>
+        <button class="btn block mt" id="g-pick">📂 Escolher a pasta de novo</button>
+        <button class="btn ghost block mt" id="g-local">Usar sem pendrive (salva neste computador)</button><p class="err" id="g-err"></p>`
+      : `<h2>Conectar seus dados 📁</h2><p class="muted">Este navegador está configurado para usar uma pasta${handle ? ` (<b>${U.esc(handle.name)}</b>)` : ''} — por exemplo, no seu pendrive.</p>
       ${handle ? '<button class="btn primary block" id="g-reopen">🔓 Permitir acesso à pasta</button>' : ''}
       <button class="btn block mt" id="g-pick">📂 Escolher outra pasta</button>
       <button class="btn ghost block mt" id="g-local">Usar os dados deste navegador</button><p class="err" id="g-err"></p>`);
     return new Promise((resolve) => {
-      const done = (b) => { S.backend = b; closeGate(); resolve(); };
+      const done = (b) => { localStorage.setItem('vidaos.backend', 'pasta'); S.backend = b; closeGate(); resolve(); };
       const r = g.querySelector('#g-reopen');
-      if (r) r.onclick = async () => { try { if ((await handle.requestPermission({ mode: 'readwrite' })) === 'granted') done(folderBackend(handle)); } catch (e) { g.querySelector('#g-err').textContent = 'Pasta não encontrada. O pendrive está conectado?'; } };
+      if (r) r.onclick = async () => { try { if ((await handle.requestPermission({ mode: 'readwrite' })) === 'granted') done(folderBackend(handle)); } catch (e) { g.querySelector('#g-err').textContent = 'Pasta não encontrada. O pendrive está conectado? Se ele mudou de letra (E:, F:…), use “Escolher a pasta de novo”.'; } };
       g.querySelector('#g-pick').onclick = async () => { try { done(await S.pickFolder()); } catch (e) { /* cancelado */ } };
-      g.querySelector('#g-local').onclick = () => { localStorage.removeItem('vidaos.backend'); S.backend = { kind: 'navegador', label: '🌐 Navegador' }; closeGate(); resolve(); };
+      g.querySelector('#g-local').onclick = () => { if (isFile) localStorage.setItem('vidaos.backend', 'navegador'); else localStorage.removeItem('vidaos.backend'); S.backend = { kind: 'navegador', label: '🌐 Navegador' }; closeGate(); resolve(); };
     });
   };
 
@@ -343,10 +358,15 @@
         window.addEventListener('pagehide', () => { if (S.hasPending()) S.saveState(App.state); b.bye(); });
       }
     }
-    if (!S.backend && localStorage.getItem('vidaos.backend') === 'pasta' && S.folderSupported()) {
+    // aberto direto do pendrive (arquivo .html, sem o programa): usa a pasta "dados" do pendrive
+    if (!S.backend && S.folderSupported() && (localStorage.getItem('vidaos.backend') === 'pasta' || (isFile && localStorage.getItem('vidaos.backend') !== 'navegador'))) {
       let h = null; try { h = await idb('kv', 'readonly', (st) => st.get('folder')); } catch (e) { /* */ }
       let ok = false; try { ok = h && (await h.queryPermission({ mode: 'readwrite' })) === 'granted'; } catch (e) { /* */ }
       if (ok) S.backend = folderBackend(h); else await connectFolder(h);
+    }
+    if (!S.backend && isFile && !S.folderSupported() && localStorage.getItem('vidaos.backend') !== 'navegador') {
+      const g = await gate(`<h2>Abra no Edge ou no Chrome 🌐</h2><p class="muted">Este navegador não consegue gravar no pendrive. Feche esta aba, clique com o botão direito em <b>“Abrir Vida OS no navegador”</b> → <b>Abrir com</b> → <b>Microsoft Edge</b> (ou Google Chrome).</p><button class="btn ghost block mt" id="g-local">Continuar mesmo assim (salva neste computador)</button>`);
+      await new Promise((res) => { g.querySelector('#g-local').onclick = () => { localStorage.setItem('vidaos.backend', 'navegador'); closeGate(); res(); }; });
     }
     if (!S.backend) S.backend = { kind: 'navegador', label: '🌐 Navegador' };
     if (S.isRemote()) {

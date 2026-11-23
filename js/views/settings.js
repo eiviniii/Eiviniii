@@ -76,7 +76,8 @@
       <p>${where}.</p>
       ${b.kind === 'pendrive' ? `<div class="note">✅ <b>Modo portátil ativo.</b> Tudo o que você faz é gravado no pendrive na hora. O computador não guarda nada — nem os dados, nem o navegador (o perfil do navegador também fica no pendrive). Cópias de segurança automáticas ficam em <code>dados/backups</code>.</div>
         <button class="btn primary" data-act="safeExit">⏏️ Sair com segurança</button>` : ''}
-      ${b.kind === 'pasta' ? `<div class="note">Os dados são gravados direto na pasta escolhida. Para máxima privacidade use o <b>programa portátil</b> (o navegador deste PC ainda guarda uma referência à pasta).</div>
+      ${b.kind === 'pasta' && S.isFile ? `<div class="note">✅ <b>Pendrive pelo navegador.</b> Tudo é gravado na pasta <b>${U.esc(b.dir.name)}</b> do pendrive — os mesmos dados do programa .exe. Este computador guarda só a lembrança de qual pasta abrir (nenhum dado seu). Antes de tirar o pendrive, use <b>⏏️ Sair com segurança</b>.</div>` : ''}
+      ${b.kind === 'pasta' && !S.isFile ? `<div class="note">Os dados são gravados direto na pasta escolhida. Para máxima privacidade use o <b>programa portátil</b> (o navegador deste PC ainda guarda uma referência à pasta).</div>
         <div class="row"><button class="btn" data-act="toFolder">📂 Trocar de pasta</button><button class="btn ghost" data-act="toBrowser">Voltar a usar o navegador</button></div>` : ''}
       ${b.kind === 'navegador' ? `<div class="note warn">Seus dados estão presos a este navegador. Para levar tudo no <b>pendrive</b>, use uma das opções:</div>
         <ol class="steps">

@@ -27,6 +27,14 @@ Extras do modo pendrive:
 
 **Sem o programa:** abrindo o `index.html` no Chrome/Edge, vá em Ajustes → Armazenamento → **"Escolher pasta no pendrive"** — os dados passam a ser gravados direto nessa pasta.
 
+### 🛡️ Windows bloqueou o .exe? Abra pelo navegador, direto do pendrive
+O **Controle Inteligente de Aplicativos** do Windows 11 bloqueia qualquer `.exe` sem assinatura digital paga, e não tem botão de liberar. Por isso o pacote (`portatil/pacote.sh` gera o zip) também traz a pasta `sistema/` e o arquivo **`Abrir Vida OS no navegador.html`**:
+1. Dois cliques nele (abre no Edge ou no Chrome).
+2. **Escolher a pasta do pendrive** → selecione a pasta `VidaOS` (ou `VidaOS\dados`) → **Editar arquivos / Permitir**.
+3. São os **mesmos dados** do programa (`dados/estado.json` + `dados/arquivos/`, com a mesma senha), então dá para alternar entre `.exe` e navegador.
+
+O computador guarda só a lembrança de qual pasta abrir, nenhum dado seu. O acesso pelo celular precisa do `.exe`.
+
 ### 🌐 No navegador / celular
 Abra o `index.html` (ou publique no GitHub Pages: Settings → Pages). Nesse modo os dados ficam no navegador; use **Backup completo** para levar de um aparelho para outro. (Celulares não executam programas a partir de pendrive.)
 
